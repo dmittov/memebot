@@ -60,8 +60,6 @@ class SimpleTimeCensor(CensorAbstract):
             "expiresAt": now + timedelta(hours=25),
             "count": Increment(1),
         })
-        # FIXME: registering the original message_id instead of if of the
-        # forwarded message
         self.db.collection("messages").document().set({
             "uid": uid,
             "createdAt": firestore.SERVER_TIMESTAMP,
