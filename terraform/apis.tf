@@ -5,6 +5,7 @@ resource "google_project_service" "required_apis" {
     "cloudresourcemanager.googleapis.com",
     "serviceusage.googleapis.com",
     "secretmanager.googleapis.com",
+    "firestore.googleapis.com",
   ])
   project                    = data.google_client_config.default.project
   service                    = each.key
