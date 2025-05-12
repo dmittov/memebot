@@ -46,3 +46,9 @@ resource "google_storage_bucket_iam_member" "staging_bucket_access" {
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${data.google_client_config.default.project}@appspot.gserviceaccount.com"
 }
+
+resource "google_project_iam_member" "secret_accessor" {
+  project = data.google_client_config.default.project
+  role    = "roles/secretmanager.secretAccessor"
+  member  = "serviceAccount:${data.google_client_config.default.project}@appspot.gserviceaccount.com"
+}
