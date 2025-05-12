@@ -52,3 +52,9 @@ resource "google_project_iam_member" "secret_accessor" {
   role    = "roles/secretmanager.secretAccessor"
   member  = "serviceAccount:${data.google_client_config.default.project}@appspot.gserviceaccount.com"
 }
+
+resource "google_project_iam_member" "firestore_owner" {
+  project = data.google_client_config.default.project
+  role    = "roles/datastore.owner"
+  member  = "serviceAccount:${data.google_client_config.default.project}@appspot.gserviceaccount.com"
+}

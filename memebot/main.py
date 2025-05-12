@@ -5,13 +5,14 @@ import logging
 from typing import Any
 from config import CHANNEL_ID
 from flask import Flask, request
-from google.cloud import firestore
-from message import send_message, forward_message, post_api
-from commands import handle_command
+from message import post_api
+from censor import Censor
+from logging import getLogger
 
 
-firestore_client = firestore.Client()
+meme_censor = Censor()
 app = Flask(__name__)
+logger = getLogger(__name__)
 
 
 @app.get("/")
@@ -44,21 +45,17 @@ def telegram_webhook():
         return "ignored", 200
 
     if "photo" in message or is_image_document(message):
-        handle_post(chat_id, user_id, message)
+        try:
+            meme_censor.post(chat_id, user_id, message)
+        except Exception as exc:  # noqa: BLE001
+            logger.error(exc)
         return "OK", 200
-
-    return "OK", 200
 
 
 def is_image_document(message: dict[str, Any]) -> bool:
     if doc := message.get("document"):
         return doc.get("mime_type", "").startswith("image/")
     return False
-
-
-def handle_post(reply_chat: int, user_id: int, message: dict[str, Any]):
-    forward_message(CHANNEL_ID, reply_chat, message["message_id"])
-    send_message(reply_chat, f"✅ Message sent")
 
 
 if os.getenv("WEBHOOK_URL"):
