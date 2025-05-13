@@ -1,9 +1,11 @@
 import logging
-from typing import Any
-import requests
 import os
-from memebot.config import get_secret
 from functools import cache
+from typing import Any
+
+import requests
+
+from memebot.config import get_secret
 
 logger = logging.getLogger(__name__)
 

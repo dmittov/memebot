@@ -1,6 +1,7 @@
-import os
-import google.cloud.secretmanager as sm
 import logging
+import os
+
+import google.cloud.secretmanager as sm
 
 
 def get_secret(resource_name: str) -> str:

@@ -1,7 +1,9 @@
-import pytest
-from main import app as flask_app
-from flask.testing import FlaskClient
 from typing import Generator
+
+import pytest
+from flask.testing import FlaskClient
+
+from main import app as flask_app
 
 
 @pytest.fixture

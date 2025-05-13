@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-import os
 import logging
-from flask import Flask, request
-from memebot.message import MessageUtil
-from memebot.commands import build_command, CommandInterface
-from logging import getLogger
+import os
 import traceback
+from logging import getLogger
 
+from flask import Flask, request
+
+from memebot.commands import CommandInterface, build_command
+from memebot.message import MessageUtil
 
 app = Flask(__name__)
 logger = getLogger(__name__)
