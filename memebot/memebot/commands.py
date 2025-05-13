@@ -1,7 +1,7 @@
 import abc
 from typing import override, final, Dict, Type, Callable
 from memebot.message import MessageUtil
-from memebot.censor import Censor
+from memebot.censor import DefaultCensor
 from logging import getLogger
 
 logger = getLogger(__name__)
@@ -33,7 +33,7 @@ class HelpCommand(CommandInterface):
 
 class ForwardCommand(CommandInterface):
     
-    meme_censor = Censor()
+    meme_censor = DefaultCensor()
     
     @override
     def run(self) -> None:

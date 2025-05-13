@@ -19,7 +19,6 @@ class MessageUtil:
             token = get_token()
         self.bot_api = f"https://api.telegram.org/bot{token}"
 
-
     def post_api(self, method: str, payload: dict[str, Any]) -> dict:
         try:
             response = requests.post(

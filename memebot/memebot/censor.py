@@ -99,4 +99,4 @@ class SimpleTimeCensor(CensorAbstract):
         )
 
 
-Censor = SimpleTimeCensor
+DefaultCensor = SimpleTimeCensor
