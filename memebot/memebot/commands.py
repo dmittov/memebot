@@ -1,6 +1,6 @@
 import abc
 from logging import getLogger
-from typing import Callable, Dict, Type, final, override
+from typing import final, override
 
 from memebot.censor import DefaultCensor
 from memebot.message import MessageUtil
