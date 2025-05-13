@@ -1,7 +1,7 @@
 import abc
 from typing import override, final, Dict, Type, Callable
-from message import send_message
-from censor import Censor
+from memebot.message import MessageUtil
+from memebot.censor import Censor
 from logging import getLogger
 
 logger = getLogger(__name__)
@@ -25,7 +25,10 @@ class HelpCommand(CommandInterface):
 
     @override
     def run(self) -> None:
-        send_message(chat_id=self.message["chat"]["id"], text=self.HELP_MESSAGE)
+        MessageUtil.send_message(
+            chat_id=self.message["chat"]["id"],
+            text=self.HELP_MESSAGE
+        )
 
 
 class ForwardCommand(CommandInterface):
@@ -55,7 +58,7 @@ def build_command(message: dict) -> CommandInterface:
     # bot commands
     if text.startswith("/"):
         try:
-            command_type, _ = text.split(maxsplit=1)
+            command_type, *_ = text[1:].split(maxsplit=1)
             command_cls = COMMAND_REGISTRY[command_type]
         except KeyError as exc:
             raise ValueError(f"Unhandled message type {command_type}") from exc

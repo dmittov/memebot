@@ -4,8 +4,8 @@ from google.cloud.firestore import Increment, FieldFilter
 from dataclasses import dataclass
 from typing import override
 from datetime import datetime, timedelta, timezone
-from message import send_message, forward_message
-from config import CHANNEL_ID
+from memebot.message import MessageUtil
+from memebot.config import CHANNEL_ID
 from logging import getLogger
 
 logger = getLogger(__name__)
@@ -29,10 +29,14 @@ class CensorAbstract(abc.ABC):
     def post(self, chat_id: int, uid: int, message: dict) -> None:
         check_result = self.check(uid)
         if check_result.is_allowed:
-            response = forward_message(CHANNEL_ID, chat_id, message["message_id"])
+            response = MessageUtil().forward_message(
+                CHANNEL_ID,
+                chat_id,
+                message["message_id"]
+            )
             logger.info(response.json())
             self.register(uid, response.json()["result"]["message_id"])
-        send_message(chat_id, check_result.reason)
+        MessageUtil().send_message(chat_id, check_result.reason)
 
 
 class SimpleTimeCensor(CensorAbstract):

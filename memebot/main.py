@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import os
 import logging
-from typing import Any
-from config import CHANNEL_ID
 from flask import Flask, request
-from message import post_api
-from commands import build_command, CommandInterface
+from memebot.message import post_api
+from memebot.commands import build_command, CommandInterface
 from logging import getLogger
 import traceback
 
