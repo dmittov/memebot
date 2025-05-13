@@ -10,9 +10,7 @@ def get_secret(resource_name: str) -> str:
     return payload_bytes.decode("utf-8")
 
 
-ADMINS = {
-    int(uid) for uid in os.getenv("ADMIN_IDS", "").split(",") if uid.strip()
-}
+ADMINS = {int(uid) for uid in os.getenv("ADMIN_IDS", "").split(",") if uid.strip()}
 
 # pass log level through env
 # and configure gcs log sink

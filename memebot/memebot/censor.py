@@ -36,9 +36,7 @@ class CensorAbstract(abc.ABC):
         check_result = self.check(uid)
         if check_result.is_allowed:
             response = MessageUtil().forward_message(
-                get_channel_id(),
-                chat_id,
-                message["message_id"]
+                get_channel_id(), chat_id, message["message_id"]
             )
             logger.info(response.json())
             self.register(uid, response.json()["result"]["message_id"])
@@ -52,7 +50,7 @@ class SimpleTimeCensor(CensorAbstract):
     def __is_banned(self, user_id: int) -> bool:
         _ = user_id
         return False
-    
+
     @override
     def register(self, user_id: int, message_id: int) -> None:
         now = datetime.now(timezone.utc)
@@ -65,17 +63,21 @@ class SimpleTimeCensor(CensorAbstract):
             .collection("minutes")
             .document(bucket_id)
         )
-        bucket_ref.set({
-            "ts": now.replace(second=0, microsecond=0),
-            "expiresAt": now + timedelta(hours=25),
-            "count": Increment(1),
-        })
-        self.db.collection("messages").document().set({
-            "uid": uid,
-            "createdAt": firestore.SERVER_TIMESTAMP,
-            "expiresAt": now + timedelta(hours=25),
-            "message_id": message_id,
-        })
+        bucket_ref.set(
+            {
+                "ts": now.replace(second=0, microsecond=0),
+                "expiresAt": now + timedelta(hours=25),
+                "count": Increment(1),
+            }
+        )
+        self.db.collection("messages").document().set(
+            {
+                "uid": uid,
+                "createdAt": firestore.SERVER_TIMESTAMP,
+                "expiresAt": now + timedelta(hours=25),
+                "message_id": message_id,
+            }
+        )
 
     @override
     def check(self, user_id: int) -> CensorResult:
@@ -85,8 +87,7 @@ class SimpleTimeCensor(CensorAbstract):
         since = datetime.now(timezone.utc) - timedelta(hours=24)
         uid = str(user_id)
         buckets = (
-            self.db
-            .collection("posts")
+            self.db.collection("posts")
             .document(uid)
             .collection("minutes")
             .where(filter=FieldFilter("ts", ">=", since))
@@ -96,12 +97,10 @@ class SimpleTimeCensor(CensorAbstract):
             n_msg += doc.to_dict().get("count", 0)
         if n_msg >= 2:
             return CensorResult(
-                is_allowed=False,
-                reason="You have 2+ posts in the last 24 hours"
+                is_allowed=False, reason="You have 2+ posts in the last 24 hours"
             )
         return CensorResult(
-            is_allowed=True,
-            reason=f"Message sent, {2 - n_msg} left for today"
+            is_allowed=True, reason=f"Message sent, {2 - n_msg} left for today"
         )
 
 

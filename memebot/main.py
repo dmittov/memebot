@@ -26,7 +26,7 @@ def telegram_webhook():
     message = update.get("message")
     if not message:
         return "ignored", 200
-    
+
     # do not fail in any case, but log all errors
     try:
         command: CommandInterface = build_command(message)

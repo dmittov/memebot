@@ -19,22 +19,19 @@ class CommandInterface(abc.ABC):
 
 class HelpCommand(CommandInterface):
 
-    HELP_MESSAGE = (
-        "Just send a picture to bot, it will forward it to the channel"
-    )
+    HELP_MESSAGE = "Just send a picture to bot, it will forward it to the channel"
 
     @override
     def run(self) -> None:
         MessageUtil.send_message(
-            chat_id=self.message["chat"]["id"],
-            text=self.HELP_MESSAGE
+            chat_id=self.message["chat"]["id"], text=self.HELP_MESSAGE
         )
 
 
 class ForwardCommand(CommandInterface):
-    
+
     censor = DefaultCensor()
-    
+
     @override
     def run(self) -> None:
         try:
@@ -47,9 +44,9 @@ class ForwardCommand(CommandInterface):
 
 
 COMMAND_REGISTRY = dict(
-    help = HelpCommand,
-    start = HelpCommand,
-    forward = ForwardCommand,
+    help=HelpCommand,
+    start=HelpCommand,
+    forward=ForwardCommand,
 )
 
 

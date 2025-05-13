@@ -6,6 +6,7 @@ class TestMain:
         response = client.get("/")
         assert response.status_code == 200
 
+
 class TestWebhook:
     link = "/webhook"
 
@@ -23,7 +24,7 @@ class TestWebhook:
                 "options": [
                     {"text": "red", "voter_count": 100},
                     {"text": "blue", "voter_count": 100},
-                ]
+                ],
             }
         }
         response = client.post(self.link, json=payload)

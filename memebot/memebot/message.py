@@ -23,9 +23,7 @@ class MessageUtil:
     def post_api(self, method: str, payload: dict[str, Any]) -> dict:
         try:
             response = requests.post(
-                f"{self.bot_api}/{method}",
-                json=payload,
-                timeout=10
+                f"{self.bot_api}/{method}", json=payload, timeout=10
             )
             if not response.ok:
                 logger.error("%s failed: %s", method, response.text)
@@ -37,13 +35,11 @@ class MessageUtil:
     def send_message(self, chat_id: str | int, text: str, **params):
         self.post_api("sendMessage", {"chat_id": chat_id, "text": text, **params})
 
-    def forward_message(self, to_chat: str | int, from_chat: str | int, msg_id: int) -> dict:
+    def forward_message(
+        self, to_chat: str | int, from_chat: str | int, msg_id: int
+    ) -> dict:
         response = self.post_api(
             "forwardMessage",
-            {
-                "chat_id": to_chat,
-                "from_chat_id": from_chat,
-                "message_id": msg_id
-            },
+            {"chat_id": to_chat, "from_chat_id": from_chat, "message_id": msg_id},
         )
         return response
