@@ -24,7 +24,7 @@ class HelpCommand(CommandInterface):
 
     @override
     def run(self) -> None:
-        MessageUtil.send_message(
+        MessageUtil().send_message(
             chat_id=self.message["chat"]["id"], text=self.HELP_MESSAGE
         )
 
