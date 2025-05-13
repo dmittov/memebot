@@ -1,6 +1,7 @@
-import os
-import google.cloud.secretmanager as sm
 import logging
+import os
+
+import google.cloud.secretmanager as sm
 
 
 def get_secret(resource_name: str) -> str:
@@ -10,11 +11,8 @@ def get_secret(resource_name: str) -> str:
     return payload_bytes.decode("utf-8")
 
 
-TOKEN = get_secret(os.environ["TELEGRAM_TOKEN"])
-CHANNEL_ID = os.environ["CHANNEL_ID"]    
-ADMINS = {
-    int(uid) for uid in os.getenv("ADMIN_IDS", "").split(",") if uid.strip()
-}
-BOT_API = f"https://api.telegram.org/bot{TOKEN}"
+ADMINS = {int(uid) for uid in os.getenv("ADMIN_IDS", "").split(",") if uid.strip()}
 
+# pass log level through env
+# and configure gcs log sink
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(message)s")
