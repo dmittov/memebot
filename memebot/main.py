@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import logging
 from flask import Flask, request
-from memebot.message import post_api
+from memebot.message import MessageUtil
 from memebot.commands import build_command, CommandInterface
 from logging import getLogger
 import traceback
@@ -39,6 +39,6 @@ def telegram_webhook():
 
 if os.getenv("WEBHOOK_URL"):
     try:
-        post_api("setWebhook", {"url": os.environ["WEBHOOK_URL"]})
+        MessageUtil().post_api("setWebhook", {"url": os.environ["WEBHOOK_URL"]})
     except Exception:  # noqa: BLE001
         logging.exception("Could not set webhook")

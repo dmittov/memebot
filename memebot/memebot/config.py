@@ -10,9 +10,10 @@ def get_secret(resource_name: str) -> str:
     return payload_bytes.decode("utf-8")
 
 
-CHANNEL_ID = os.environ["CHANNEL_ID"]    
 ADMINS = {
     int(uid) for uid in os.getenv("ADMIN_IDS", "").split(",") if uid.strip()
 }
 
+# pass log level through env
+# and configure gcs log sink
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(message)s")

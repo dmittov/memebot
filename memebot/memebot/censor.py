@@ -5,10 +5,16 @@ from dataclasses import dataclass
 from typing import override
 from datetime import datetime, timedelta, timezone
 from memebot.message import MessageUtil
-from memebot.config import CHANNEL_ID
 from logging import getLogger
+from functools import cache
+import os
 
 logger = getLogger(__name__)
+
+
+@cache
+def get_channel_id() -> str:
+    return os.getenv("CHANNEL_ID", "@NoChannel")
 
 
 @dataclass(frozen=True)
@@ -30,7 +36,7 @@ class CensorAbstract(abc.ABC):
         check_result = self.check(uid)
         if check_result.is_allowed:
             response = MessageUtil().forward_message(
-                CHANNEL_ID,
+                get_channel_id(),
                 chat_id,
                 message["message_id"]
             )

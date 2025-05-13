@@ -1,10 +1,11 @@
 import pytest
-import os
+from main import app as flask_app
+from flask.testing import FlaskClient
+from typing import Generator
 
-os.environ.setdefault("CHANNEL_ID", "42")
 
-
-@pytest.fixture(autouse=True)
-def _fake_google_secret(monkeypatch):
-    # telegram token must be present – its value does not matter now
-    monkeypatch.setattr("memebot.config.get_secret", lambda name: "FAKE_TOKEN")
+@pytest.fixture
+def client() -> Generator[FlaskClient, None, None]:
+    flask_app.config.update(TESTING=True)
+    with flask_app.test_client() as client:
+        yield client

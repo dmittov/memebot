@@ -7,9 +7,10 @@ from functools import cache
 
 logger = logging.getLogger(__name__)
 
+
 @cache
 def get_token() -> str:
-    return get_secret(os.environ["TELEGRAM_TOKEN"])
+    return get_secret(os.getenv("TELEGRAM_TOKEN", "NoToken"))
 
 
 class MessageUtil:
