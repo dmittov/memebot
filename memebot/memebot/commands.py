@@ -33,7 +33,7 @@ class HelpCommand(CommandInterface):
 
 class ForwardCommand(CommandInterface):
     
-    meme_censor = DefaultCensor()
+    censor = DefaultCensor()
     
     @override
     def run(self) -> None:
@@ -41,7 +41,7 @@ class ForwardCommand(CommandInterface):
             chat_id = self.message["chat"]["id"]
             user = self.message["from"]
             user_id = user["id"]
-            self.meme_censor.post(chat_id, user_id, self.message)
+            self.censor.post(chat_id, user_id, self.message)
         except Exception as exc:
             raise ValueError(f"Couldn't forward message") from exc
 
