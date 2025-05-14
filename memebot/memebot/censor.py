@@ -102,7 +102,8 @@ class SimpleTimeCensor(CensorAbstract):
                 is_allowed=False, reason="You have 2+ posts in the last 24 hours"
             )
         return CensorResult(
-            is_allowed=True, reason=f"Message sent, {2 - n_msg} left for today"
+            is_allowed=True,
+            reason=f"Message sent, {max(2 - n_msg - 1, 0)} left for today",
         )
 
 

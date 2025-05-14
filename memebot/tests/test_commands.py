@@ -38,6 +38,6 @@ class TestHelpCommand:
         command = commands.HelpCommand(message)
         command.run()
         MessageUtilMock.return_value.send_message.assert_called_once_with(
-            chat_id=base_message["chat"]["id"], 
+            chat_id=base_message["chat"]["id"],
             text=command.HELP_MESSAGE,
         )
