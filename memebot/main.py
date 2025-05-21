@@ -22,7 +22,7 @@ def index():
 @app.post("/webhook")
 def telegram_webhook():
     update = request.get_json(force=True, silent=True) or {}
-    logging.debug("update: %s", update)
+    logging.info("update: %s", update)
 
     message = update.get("message")
     if not message:
@@ -38,8 +38,51 @@ def telegram_webhook():
     return "OK", 200
 
 
-if os.getenv("WEBHOOK_URL"):
+def setWebhook(webhook_url: str) -> None:
+    # https://core.telegram.org/bots/api#setwebhook
+    # allowed_updates = all types except 
+    # - chat_member
+    # - message_reaction
+    # - message_reaction_count
+    # need to list all types explicitly to add them
+    # TODO: add some telegram api library to get the list of available options
+    # instead of copying them from the doc
+    allowed_updates = [
+        "message",
+        "edited_message",
+        "channel_post",
+        "edited_channel_post",
+        "business_connection",
+        "business_message",
+        "edited_business_message",
+        "deleted_business_messages",
+        "message_reaction",
+        "message_reaction_count",
+        "inline_query",
+        "chosen_inline_result",
+        "callback_query",
+        "shipping_query",
+        "pre_checkout_query",
+        "purchased_paid_media",
+        "poll",
+        "poll_answer",
+        "my_chat_member",
+        "chat_member",
+        "chat_join_request",
+        "chat_boost",
+        "removed_chat_boost",
+    ]
     try:
-        MessageUtil().post_api("setWebhook", {"url": os.environ["WEBHOOK_URL"]})
+        MessageUtil().post_api(
+            "setWebhook",
+            dict(
+                url=webhook_url,
+                allowed_updates=allowed_updates,
+            ),
+        )
     except Exception:  # noqa: BLE001
         logging.exception("Could not set webhook")
+
+
+if (webhook_url := os.getenv("WEBHOOK_URL")):
+    setWebhook(webhook_url)
