@@ -4,7 +4,7 @@ from memebot.censor import SimpleTimeCensor
 from pytest import mark
 
 
-@mark.integration
+@mark.firestore
 @mark.xdist_group("firestore")
 class TestSimpleTimeCensor:
 
