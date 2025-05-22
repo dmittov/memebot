@@ -47,6 +47,11 @@ class AbstractCensor(abc.ABC):
 
 class SimpleTimeCensor(AbstractCensor):
     def __init__(self) -> None:
+        # Client is not pooled, it's a fair connection
+        # according to a doc, pooling is not needed due sharing a channel
+        # between clients
+        # TODO:
+        # But the connection may fail, need a custom pool to handle it
         self.db = firestore.Client()
 
     def __is_banned(self, user_id: int) -> bool:
