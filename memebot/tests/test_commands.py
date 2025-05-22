@@ -3,15 +3,6 @@ from pytest_mock import MockerFixture
 import memebot.commands as commands
 
 
-@pytest.fixture
-def base_message():
-    """Minimal Telegram-style message structure reused in several tests."""
-    return {
-        "chat": {"id": 111, "type": "private"},
-        "from": {"id": 222},
-    }
-
-
 @pytest.mark.parametrize(
     ("text", "expected_cls"),
     [

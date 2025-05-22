@@ -45,9 +45,20 @@ def firestore_emulator() -> Generator[str, None, None]:
         os.environ.pop("FIRESTORE_EMULATOR_HOST", None)
 
 
+# FIXME: probably some clients don't need real firestore and can use a Mock
 @pytest.fixture(scope="session")
 def client(firestore_emulator: str) -> Generator[FlaskClient, None, None]:
+    _ = firestore_emulator
     from main import app as flask_app
     flask_app.config.update(TESTING=True)
     with flask_app.test_client() as client:
         yield client
+
+
+@pytest.fixture
+def base_message():
+    """Minimal Telegram-style message structure reused in several tests."""
+    return {
+        "chat": {"id": 111, "type": "private"},
+        "from": {"id": 222},
+    }
