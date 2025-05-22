@@ -2,6 +2,7 @@ import abc
 import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from functools import cache
 from logging import getLogger
 from typing import override
@@ -53,6 +54,7 @@ class SimpleTimeCensor(AbstractCensor):
     firestore_ttl = timedelta(hours=25)
     time_horizon = timedelta(hours=24)
     n_message_limit = 2
+    tz = ZoneInfo("Europe/Berlin")
 
     @cached_property
     def db(self) -> firestore.Client:
@@ -101,15 +103,21 @@ class SimpleTimeCensor(AbstractCensor):
             .document(uid)
             .collection("minutes")
             .where(filter=FieldFilter("ts", ">=", since))
+            .order_by("ts", direction=firestore.Query.DESCENDING)
         )
         n_msg = 0
         for doc in buckets.stream():
-            n_msg += doc.to_dict().get("count", 0)
-        if n_msg >= self.n_message_limit:
-            return CensorResult(
-                is_allowed=False,
-                reason=f"You have {self.n_message_limit}+ posts in the last {self.time_horizon}",
-            )
+            doc_dict = doc.to_dict()
+            n_msg += doc_dict.get("count", 0)
+            if n_msg >= self.n_message_limit:
+                can_post_from = (doc_dict["ts"] + self.time_horizon).astimezone(self.tz)
+                return CensorResult(
+                    is_allowed=False,
+                    reason=(
+                        f"You have {self.n_message_limit}+ posts in the last {self.time_horizon}\n"
+                        f"You can post from {can_post_from}"
+                    ),
+                )
         return CensorResult(
             is_allowed=True,
             # The check is performed just before the message is sent

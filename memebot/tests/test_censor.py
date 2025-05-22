@@ -40,13 +40,38 @@ class TestSimpleTimeCensor:
     ) -> None:
         _ = firestore_emulator
         censor = SimpleTimeCensor()
+        now = datetime.now(timezone.utc)
         for msg_idx in range(n_msg):
             censor.register(
                 user_id=uid,
                 message_id=uid + msg_idx,
-                dt=datetime.now(timezone.utc)
+                dt=now
                 - timedelta(hours=2)
                 - timedelta(hours=msg_idx),
             )
         censor_result = censor.check(uid)
         assert censor_result.is_allowed == expected_is_allowed
+
+    def test_check_mesasge(self, firestore_emulator: None) -> None:
+        """Check the error message"""
+        _ = firestore_emulator
+        censor = SimpleTimeCensor()
+        uid = 777
+        now = datetime.now(timezone.utc)
+        desired_time = (
+            # Local bt timezone / Berlin time
+            now.astimezone(SimpleTimeCensor.tz)
+            # 1 message has the current time, the second one which is 1 hr older
+            # hits the threshold
+            - timedelta(hours=SimpleTimeCensor.n_message_limit - 1)
+            + SimpleTimeCensor.time_horizon
+        ).replace(second=0, microsecond=0)
+        for msg_idx in range(SimpleTimeCensor.n_message_limit):
+            censor.register(
+                user_id=uid,
+                message_id=msg_idx,
+                dt=now - timedelta(hours=msg_idx),
+            )
+        censor_result = censor.check(uid)
+        assert censor_result.is_allowed == False
+        assert f"{desired_time}" in censor_result.reason
