@@ -1,5 +1,6 @@
 from typing import Generator
 import threading
+from main import app as flask_app
 
 import os
 import signal
@@ -9,9 +10,11 @@ import pytest
 from flask.testing import FlaskClient
 from pytest import fixture
 
-
-@fixture(scope="session")
-def firestore_emulator() -> Generator[str, None, None]:
+# It needs time to start a Firestore emulator, but it's also complicated to
+# manage the interacting states of different classes, so use a fresh clean
+# db for each class
+@fixture(scope="class")
+def firestore_emulator() -> Generator[None, None, None]:
     host = "localhost"
     port = 8080
     cmd = [
@@ -37,7 +40,7 @@ def firestore_emulator() -> Generator[str, None, None]:
     os.environ["FIRESTORE_EMULATOR_HOST"] = f"{host}:{port}"
 
     try:
-        yield os.environ["FIRESTORE_EMULATOR_HOST"]
+        yield
     finally:
         proc.send_signal(signal.SIGINT)
         proc.wait(timeout=10)
@@ -47,9 +50,7 @@ def firestore_emulator() -> Generator[str, None, None]:
 
 # FIXME: probably some clients don't need real firestore and can use a Mock
 @pytest.fixture(scope="session")
-def client(firestore_emulator: str) -> Generator[FlaskClient, None, None]:
-    _ = firestore_emulator
-    from main import app as flask_app
+def client() -> Generator[FlaskClient, None, None]:
     flask_app.config.update(TESTING=True)
     with flask_app.test_client() as client:
         yield client

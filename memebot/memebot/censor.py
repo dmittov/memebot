@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from functools import cache
 from logging import getLogger
 from typing import override
+from functools import cached_property
 
 from google.cloud import firestore
 from google.cloud.firestore import FieldFilter, Increment
@@ -28,11 +29,11 @@ class CensorResult:
 class AbstractCensor(abc.ABC):
     @abc.abstractmethod
     def check(self, uid: int) -> bool:
-        pass
+        ...
 
     @abc.abstractmethod
-    def register(self, uid: int, message_id: int) -> None:
-        pass
+    def register(self, uid: int, message_id: int, dt: datetime) -> None:
+        ...
 
     def post(self, chat_id: int, uid: int, message: dict) -> None:
         check_result = self.check(uid)
@@ -41,47 +42,54 @@ class AbstractCensor(abc.ABC):
                 get_channel_id(), chat_id, message["message_id"]
             )
             logger.info(response.json())
-            self.register(uid, response.json()["result"]["message_id"])
+            self.register(
+                uid=uid,
+                message_id=response.json()["result"]["message_id"],
+                dt=datetime.now(timezone.utc),
+            )
         MessageUtil().send_message(chat_id, check_result.reason)
 
 
 class SimpleTimeCensor(AbstractCensor):
-    def __init__(self) -> None:
+
+    @cached_property
+    def db(self) -> firestore.Client:
         # Client is not pooled, it's a fair connection
         # according to a doc, pooling is not needed due sharing a channel
         # between clients
         # TODO:
         # But the connection may fail, need a custom pool to handle it
-        self.db = firestore.Client()
+        return firestore.Client()
 
     def __is_banned(self, user_id: int) -> bool:
         _ = user_id
         return False
 
     @override
-    def register(self, user_id: int, message_id: int) -> None:
-        now = datetime.now(timezone.utc)
+    def register(self, user_id: int, message_id: int, dt: datetime) -> None:
         uid = str(user_id)
-        minute = now.strftime("%Y%m%d%H%M")
+        minute = dt.strftime("%Y%m%d%H%M")
         bucket_id = f"{uid}_{minute}"
         bucket_ref = (
             self.db.collection("posts")
             .document(uid)
             .collection("minutes")
+            # 666_202505221320
             .document(bucket_id)
         )
         bucket_ref.set(
             {
-                "ts": now.replace(second=0, microsecond=0),
-                "expiresAt": now + timedelta(hours=25),
+                "ts": dt.replace(second=0, microsecond=0),
+                "expiresAt": dt + timedelta(hours=25),
                 "count": Increment(1),
-            }
+            },
+            merge=True,
         )
         self.db.collection("messages").document().set(
             {
                 "uid": uid,
                 "createdAt": firestore.SERVER_TIMESTAMP,
-                "expiresAt": now + timedelta(hours=25),
+                "expiresAt": dt + timedelta(hours=25),
                 "message_id": message_id,
             }
         )

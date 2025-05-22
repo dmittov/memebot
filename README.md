@@ -7,8 +7,11 @@ TBD
 Integration test require a firebase instance.
 
 ```bash
-$ npm install -g firebase-tools
-...
+npm install -g firebase-tools
+```
+
+```bash
+pytest -n auto --dist=loadgroup
 ```
 
 ## License
