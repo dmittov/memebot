@@ -40,7 +40,7 @@ def telegram_webhook():
 
 def setWebhook(webhook_url: str) -> None:
     # https://core.telegram.org/bots/api#setwebhook
-    # allowed_updates = all types except 
+    # allowed_updates = all types except
     # - chat_member
     # - message_reaction
     # - message_reaction_count
@@ -84,5 +84,5 @@ def setWebhook(webhook_url: str) -> None:
         logging.exception("Could not set webhook")
 
 
-if (webhook_url := os.getenv("WEBHOOK_URL")):
+if webhook_url := os.getenv("WEBHOOK_URL"):
     setWebhook(webhook_url)

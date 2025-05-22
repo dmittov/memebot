@@ -14,8 +14,7 @@ class CommandInterface(abc.ABC):
         self.message = message
 
     @abc.abstractmethod
-    def run(self) -> None:
-        ...
+    def run(self) -> None: ...
 
 
 class HelpCommand(CommandInterface):
@@ -31,8 +30,7 @@ class HelpCommand(CommandInterface):
 
 class IgnoreCommand(CommandInterface):
     @override
-    def run(self) -> None:
-        ...
+    def run(self) -> None: ...
 
 
 class ForwardCommand(CommandInterface):
