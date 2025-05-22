@@ -25,7 +25,7 @@ class CensorResult:
     reason: str = ""
 
 
-class CensorAbstract(abc.ABC):
+class AbstractCensor(abc.ABC):
     @abc.abstractmethod
     def check(self, uid: int) -> bool:
         pass
@@ -45,7 +45,7 @@ class CensorAbstract(abc.ABC):
         MessageUtil().send_message(chat_id, check_result.reason)
 
 
-class SimpleTimeCensor(CensorAbstract):
+class SimpleTimeCensor(AbstractCensor):
     def __init__(self) -> None:
         self.db = firestore.Client()
 

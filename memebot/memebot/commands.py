@@ -2,7 +2,7 @@ import abc
 from logging import getLogger
 from typing import final, override
 
-from memebot.censor import DefaultCensor
+from memebot.censor import DefaultCensor, AbstractCensor
 from memebot.message import MessageUtil
 
 logger = getLogger(__name__)
