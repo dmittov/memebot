@@ -28,12 +28,10 @@ class CensorResult:
 
 class AbstractCensor(abc.ABC):
     @abc.abstractmethod
-    def check(self, uid: int) -> bool:
-        ...
+    def check(self, uid: int) -> bool: ...
 
     @abc.abstractmethod
-    def register(self, uid: int, message_id: int, dt: datetime) -> None:
-        ...
+    def register(self, uid: int, message_id: int, dt: datetime) -> None: ...
 
     def post(self, chat_id: int, uid: int, message: dict) -> None:
         check_result = self.check(uid)
@@ -52,6 +50,10 @@ class AbstractCensor(abc.ABC):
 
 class SimpleTimeCensor(AbstractCensor):
 
+    firestore_ttl = timedelta(hours=25)
+    time_horizon = timedelta(hours=24)
+    n_message_limit = 2
+
     @cached_property
     def db(self) -> firestore.Client:
         # Client is not pooled, it's a fair connection
@@ -60,10 +62,6 @@ class SimpleTimeCensor(AbstractCensor):
         # TODO:
         # But the connection may fail, need a custom pool to handle it
         return firestore.Client()
-
-    def __is_banned(self, user_id: int) -> bool:
-        _ = user_id
-        return False
 
     @override
     def register(self, user_id: int, message_id: int, dt: datetime) -> None:
@@ -74,13 +72,12 @@ class SimpleTimeCensor(AbstractCensor):
             self.db.collection("posts")
             .document(uid)
             .collection("minutes")
-            # 666_202505221320
             .document(bucket_id)
         )
         bucket_ref.set(
             {
                 "ts": dt.replace(second=0, microsecond=0),
-                "expiresAt": dt + timedelta(hours=25),
+                "expiresAt": dt + self.firestore_ttl,
                 "count": Increment(1),
             },
             merge=True,
@@ -89,17 +86,15 @@ class SimpleTimeCensor(AbstractCensor):
             {
                 "uid": uid,
                 "createdAt": firestore.SERVER_TIMESTAMP,
-                "expiresAt": dt + timedelta(hours=25),
+                "expiresAt": dt + self.firestore_ttl,
                 "message_id": message_id,
             }
         )
 
     @override
     def check(self, user_id: int) -> CensorResult:
-        # <=2 posts for the last 24 hours
-        if self.__is_banned(user_id):
-            return CensorResult(is_allowed=False, reason="You are banned")
-        since = datetime.now(timezone.utc) - timedelta(hours=24)
+        # <=n posts for the last x hours [self.time_horizon]
+        since = datetime.now(timezone.utc) - self.time_horizon
         uid = str(user_id)
         buckets = (
             self.db.collection("posts")
@@ -110,13 +105,17 @@ class SimpleTimeCensor(AbstractCensor):
         n_msg = 0
         for doc in buckets.stream():
             n_msg += doc.to_dict().get("count", 0)
-        if n_msg >= 2:
+        if n_msg >= self.n_message_limit:
             return CensorResult(
-                is_allowed=False, reason="You have 2+ posts in the last 24 hours"
+                is_allowed=False,
+                reason=f"You have {self.n_message_limit}+ posts in the last {self.time_horizon}",
             )
         return CensorResult(
             is_allowed=True,
-            reason=f"Message sent, {max(2 - n_msg - 1, 0)} left for today",
+            # The check is performed just before the message is sent
+            # do -1, because is the check is positive, then the message that is
+            # about to be send and reported is not counted yet
+            reason=f"Message sent, {max(self.n_message_limit - n_msg - 1, 0)} left for today",
         )
 
 
