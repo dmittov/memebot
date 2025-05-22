@@ -7,7 +7,7 @@ import memebot.commands as commands
 def base_message():
     """Minimal Telegram-style message structure reused in several tests."""
     return {
-        "chat": {"id": 111},
+        "chat": {"id": 111, "type": "private"},
         "from": {"id": 222},
     }
 
@@ -19,10 +19,14 @@ def base_message():
         ("/start", commands.HelpCommand),
         ("/forward", commands.ForwardCommand),
         ("any other text", commands.ForwardCommand),
+        ("should be ignored", commands.IgnoreCommand),
     ],
 )
 def test_build_command_selects_correct_class(base_message, text, expected_cls):
     base_message["text"] = text
+    # comments in the group should be ignored
+    if text == "should be ignored":
+        base_message["chat"]["type"] = "supergroup"
     cmd = commands.build_command(base_message)
     assert isinstance(cmd, expected_cls)
 
