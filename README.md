@@ -2,6 +2,15 @@
 
 TBD
 
+## Dev environment
+
+Integration test require a firebase instance.
+
+```bash
+$ npm install -g firebase-tools
+...
+```
+
 ## License
 
 [GPLv3](LICENSE)
