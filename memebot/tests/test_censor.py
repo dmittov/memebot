@@ -130,6 +130,7 @@ class TestSimpleTimeCensor:
             return_value=None,
             autospec=True,
         )
+
         message = dict(message_id=0)
         response = mocker.MagicMock(spec=Response)
         response.json = lambda: dict(result=message)
@@ -140,12 +141,7 @@ class TestSimpleTimeCensor:
         forward_message_mock.return_value = response
         send_message_mock = message_util_mock.send_message
         
-        # patched_forward_message = mocker.patch.object(
-        #     MessageUtil,
-        #     "forward_message",
-        #     return_value=response,
-        #     autospec=True,
-        # )
         censor.post(chat_id=1, user_id=1, message=message)
+        
         assert forward_message_mock.call_count == 1
         assert send_message_mock.call_count == 1
