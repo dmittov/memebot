@@ -21,3 +21,6 @@ __pycache__/
 # Ignore tests
 tests/
 .pytest_cache/
+
+# firestore logs
+.firestore-debug.log
