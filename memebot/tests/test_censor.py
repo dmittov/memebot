@@ -6,8 +6,6 @@ from pytest import mark, fixture
 from google.cloud import firestore
 from requests import Response
 
-from memebot.message import MessageUtil
-
 
 @fixture
 def censor(mocker: MockerFixture) -> SimpleTimeCensor:
