@@ -109,8 +109,8 @@ class SimpleTimeCensor(AbstractCensor):
         for doc in buckets.stream():
             doc_dict = doc.to_dict()
             n_msg += doc_dict.get("count", 0)
+            can_post_from = (doc_dict["ts"] + self.time_horizon).astimezone(self.tz)
             if n_msg >= self.n_message_limit:
-                can_post_from = (doc_dict["ts"] + self.time_horizon).astimezone(self.tz)
                 return CensorResult(
                     is_allowed=False,
                     reason=(
@@ -118,12 +118,16 @@ class SimpleTimeCensor(AbstractCensor):
                         f"You can post from {can_post_from}"
                     ),
                 )
+        n_msg_left = max(self.n_message_limit - n_msg - 1, 0)
+        reason = f"Message sent, {n_msg_left} left for today"
+        if (n_msg > 0) and (n_msg_left == 0):
+            reason += f"\nYou can create next post from {can_post_from}"
         return CensorResult(
             is_allowed=True,
             # The check is performed just before the message is sent
             # do -1, because is the check is positive, then the message that is
             # about to be send and reported is not counted yet
-            reason=f"Message sent, {max(self.n_message_limit - n_msg - 1, 0)} left for today",
+            reason=reason,
         )
 
 

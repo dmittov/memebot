@@ -75,3 +75,26 @@ class TestSimpleTimeCensor:
         censor_result = censor.check(uid)
         assert censor_result.is_allowed == False
         assert f"{desired_time}" in censor_result.reason
+
+    def test_check_last_mesasge(self, firestore_emulator: None) -> None:
+        """Check the reason message when sending the last message for a day"""
+        _ = firestore_emulator
+        censor = SimpleTimeCensor()
+        uid = 888
+        now = datetime.now(timezone.utc)
+        # desired time = now + time_horizon
+        # ingest n_message_limit - 1 messages with now timestamp
+        desired_time = (
+            # Local bt timezone / Berlin time
+            now.astimezone(SimpleTimeCensor.tz)
+            + SimpleTimeCensor.time_horizon
+        ).replace(second=0, microsecond=0)
+        for msg_idx in range(SimpleTimeCensor.n_message_limit - 1):
+            censor.register(
+                user_id=uid,
+                message_id=msg_idx,
+                dt=now,
+            )
+        censor_result = censor.check(uid)
+        assert censor_result.is_allowed == True
+        assert f"{desired_time}" in censor_result.reason
