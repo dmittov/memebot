@@ -34,8 +34,12 @@ class MessageUtil:
             raise
         return response
 
-    def send_message(self, chat_id: str | int, text: str, **params) -> requests.Response:
-        return self.post_api("sendMessage", {"chat_id": chat_id, "text": text, **params})
+    def send_message(
+        self, chat_id: str | int, text: str, **params
+    ) -> requests.Response:
+        return self.post_api(
+            "sendMessage", {"chat_id": chat_id, "text": text, **params}
+        )
 
     def forward_message(
         self, to_chat: str | int, from_chat: str | int, msg_id: int

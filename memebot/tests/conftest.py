@@ -35,9 +35,9 @@ def firestore_emulator() -> Generator[None, None, None]:
     for line in iter(proc.stdout.readline, ""):
         if "All emulators ready! It is now safe to connect your app." in line:
             break
-    else:
-        proc.terminate()
-        raise RuntimeError("Firestore emulator failed to start")
+        else:
+            proc.terminate()
+            raise RuntimeError("Firestore emulator failed to start")
 
     log_consumer = threading.Thread(
         target=lambda s: [*s], args=(proc.stdout,), daemon=True

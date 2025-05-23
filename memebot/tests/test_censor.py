@@ -140,8 +140,8 @@ class TestSimpleTimeCensor:
         forward_message_mock = message_util_mock.forward_message
         forward_message_mock.return_value = response
         send_message_mock = message_util_mock.send_message
-        
+
         censor.post(chat_id=1, user_id=1, message=message)
-        
+
         assert forward_message_mock.call_count == 1
         assert send_message_mock.call_count == 1
