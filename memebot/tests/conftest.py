@@ -54,7 +54,6 @@ def firestore_emulator() -> Generator[None, None, None]:
         os.environ.pop("FIRESTORE_EMULATOR_HOST", None)
 
 
-# FIXME: probably some clients don't need real firestore and can use a Mock
 @pytest.fixture(scope="session")
 def client() -> Generator[FlaskClient, None, None]:
     flask_app.config.update(TESTING=True)

@@ -1,12 +1,30 @@
 from datetime import datetime, timedelta, timezone
-from typing import Generator
-from memebot.censor import SimpleTimeCensor
-from pytest import mark
+
+from pytest_mock import MockerFixture
+from memebot.censor import CensorResult, SimpleTimeCensor
+from pytest import mark, fixture
+from google.cloud import firestore
+from requests import Response
+
+from memebot.message import MessageUtil
+
+
+@fixture
+def censor(mocker: MockerFixture) -> SimpleTimeCensor:
+    """SimpleTimeCensor with mocked firestore connection"""
+    mock_firestore = mocker.MagicMock(spec=firestore.Client)
+    mocker.patch.object(
+        SimpleTimeCensor,
+        "db",
+        new_callable=mocker.PropertyMock,
+        return_value=mock_firestore,
+    )
+    return SimpleTimeCensor()
 
 
 @mark.firestore
 @mark.xdist_group("firestore")
-class TestSimpleTimeCensor:
+class TestSimpleTimeCensorFirestore:
 
     def test_register(self, firestore_emulator: None) -> None:
         """Try to register # of messages above the limit and check the user can't send mesasges anymore"""
@@ -96,3 +114,38 @@ class TestSimpleTimeCensor:
         censor_result = censor.check(user_id)
         assert censor_result.is_allowed == True
         assert f"{desired_time}" in censor_result.reason
+
+
+class TestSimpleTimeCensor:
+    def test_post(self, mocker: MockerFixture, censor: SimpleTimeCensor) -> None:
+        mocker.patch.object(
+            censor,
+            "check",
+            return_value=CensorResult(is_allowed=True),
+            autospec=True,
+        )
+        mocker.patch.object(
+            censor,
+            "register",
+            return_value=None,
+            autospec=True,
+        )
+        message = dict(message_id=0)
+        response = mocker.MagicMock(spec=Response)
+        response.json = lambda: dict(result=message)
+
+        MessageUtilMock = mocker.patch("memebot.censor.MessageUtil")
+        message_util_mock = MessageUtilMock.return_value
+        forward_message_mock = message_util_mock.forward_message
+        forward_message_mock.return_value = response
+        send_message_mock = message_util_mock.send_message
+        
+        # patched_forward_message = mocker.patch.object(
+        #     MessageUtil,
+        #     "forward_message",
+        #     return_value=response,
+        #     autospec=True,
+        # )
+        censor.post(chat_id=1, user_id=1, message=message)
+        assert forward_message_mock.call_count == 1
+        assert send_message_mock.call_count == 1
