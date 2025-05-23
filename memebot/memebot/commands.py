@@ -2,7 +2,7 @@ import abc
 from logging import getLogger
 from typing import final, override
 
-from memebot.censor import DefaultCensor
+from memebot.censor import DefaultCensor, AbstractCensor
 from memebot.message import MessageUtil
 
 logger = getLogger(__name__)
@@ -14,8 +14,7 @@ class CommandInterface(abc.ABC):
         self.message = message
 
     @abc.abstractmethod
-    def run(self) -> None:
-        pass
+    def run(self) -> None: ...
 
 
 class HelpCommand(CommandInterface):
@@ -27,6 +26,11 @@ class HelpCommand(CommandInterface):
         MessageUtil().send_message(
             chat_id=self.message["chat"]["id"], text=self.HELP_MESSAGE
         )
+
+
+class IgnoreCommand(CommandInterface):
+    @override
+    def run(self) -> None: ...
 
 
 class ForwardCommand(CommandInterface):
@@ -62,4 +66,7 @@ def build_command(message: dict) -> CommandInterface:
             raise ValueError(f"Unhandled message type {command_type}") from exc
         return command_cls(message)
     # regular messages
-    return COMMAND_REGISTRY["forward"](message)
+    # make sure it's a private chat, not the group discussion
+    if message.get("chat", dict()).get("type") == "private":
+        return COMMAND_REGISTRY["forward"](message)
+    return IgnoreCommand(message)

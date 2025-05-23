@@ -1,3 +1,6 @@
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = "."
+markers = [
+    "firestore: integration tests require a firestore emulator",
+]
