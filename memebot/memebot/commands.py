@@ -43,7 +43,7 @@ class ForwardCommand(CommandInterface):
             chat_id = self.message["chat"]["id"]
             user = self.message["from"]
             user_id = user["id"]
-            self.censor.post(chat_id, user_id, self.message)
+            self.censor.post(chat_id=chat_id, user_id=user_id, message=self.message)
         except Exception as exc:
             raise ValueError(f"Couldn't forward message") from exc
 

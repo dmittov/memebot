@@ -29,20 +29,20 @@ class CensorResult:
 
 class AbstractCensor(abc.ABC):
     @abc.abstractmethod
-    def check(self, uid: int) -> bool: ...
+    def check(self, user_id: int) -> bool: ...
 
     @abc.abstractmethod
-    def register(self, uid: int, message_id: int, dt: datetime) -> None: ...
+    def register(self, user_id: int, message_id: int, dt: datetime) -> None: ...
 
-    def post(self, chat_id: int, uid: int, message: dict) -> None:
-        check_result = self.check(uid)
+    def post(self, chat_id: int, user_id: int, message: dict) -> None:
+        check_result = self.check(user_id)
         if check_result.is_allowed:
             response = MessageUtil().forward_message(
                 get_channel_id(), chat_id, message["message_id"]
             )
             logger.info(response.json())
             self.register(
-                uid=uid,
+                user_id=user_id,
                 message_id=response.json()["result"]["message_id"],
                 dt=datetime.now(timezone.utc),
             )
