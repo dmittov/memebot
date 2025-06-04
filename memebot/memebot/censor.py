@@ -2,8 +2,10 @@ import abc
 import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from logging import getLogger
 from typing import override
+from functools import cached_property
 
 from google.cloud import firestore
 from google.cloud.firestore import FieldFilter, Increment
@@ -20,7 +22,7 @@ class CensorResult:
     reason: str = ""
 
 
-class CensorAbstract(abc.ABC):
+class AbstractCensor(abc.ABC):
     @abc.abstractmethod
     def check(self, uid: int) -> bool:
         pass
@@ -48,7 +50,7 @@ class CensorAbstract(abc.ABC):
         )
 
 
-class SimpleTimeCensor(CensorAbstract):
+class SimpleTimeCensor(AbstractCensor):
     def __init__(self) -> None:
         self.db = firestore.Client()
 
