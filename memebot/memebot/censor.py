@@ -42,6 +42,7 @@ class AbstractCensor(abc.ABC):
             self.register(
                 user_id=message.from_user.id,
                 message_id=response.message_id,
+                dt=datetime.now(timezone.utc),
             )
         await get_bot().send_message(
             chat_id=message.chat.id,
