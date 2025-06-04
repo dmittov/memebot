@@ -8,6 +8,7 @@ env_variables:
   ADMIN_IDS: "75291100"  # @mittov
   WEBHOOK_URL: "https://memebot-459222.ey.r.appspot.com/webhook"
   TELEGRAM_TOKEN: projects/719240642737/secrets/telegram_token/versions/latest
+  MODEL_NAME: "gemini-2.0-flash-001"
 
 service_account: memebot-459222@appspot.gserviceaccount.com
 # ─── URL routing ──────────────────────────────────────────────────────────────
