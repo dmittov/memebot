@@ -1,5 +1,5 @@
 runtime: python312
-entrypoint: gunicorn -b :$PORT main:app
+entrypoint: hypercorn -b :$PORT main:app
 # 0.5 vCPU 512Mb
 instance_class: F2
 

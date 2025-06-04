@@ -29,11 +29,11 @@ class AbstractCensor(abc.ABC):
     @abc.abstractmethod
     def register(self, user_id: int, message_id: int, dt: datetime) -> None: ...
 
-    def post(self, message: Message) -> None:
+    async def post(self, message: Message) -> None:
         # self, chat_id: int, user_id: int, message: dict
         check_result = self.check(message.from_user.id)
         if check_result.is_allowed:
-            response = get_bot().forward_message(
+            response = await get_bot().forward_message(
                 chat_id=get_channel_id(),
                 from_chat_id=message.chat.id,
                 message_id=message.message_id,
@@ -43,7 +43,7 @@ class AbstractCensor(abc.ABC):
                 user_id=message.from_user.id,
                 message_id=response.message_id,
             )
-        get_bot().send_message(
+        await get_bot().send_message(
             chat_id=message.chat.id,
             text=check_result.reason
         )

@@ -28,7 +28,8 @@ def test_build_command_selects_correct_class(message: Message, text, expected_cl
 
 class TestHelpCommand:
 
-    def test_run_success(self, mocker: MockerFixture, message: Message) -> None:
+    @pytest.mark.asyncio
+    async def test_run_success(self, mocker: MockerFixture, message: Message) -> None:
         bot_mock = mocker.MagicMock(spec=Bot)
         _ = mocker.patch(
             "memebot.commands.get_bot",
@@ -38,7 +39,7 @@ class TestHelpCommand:
         message.text = "/help"
         message._freeze()
         command = commands.HelpCommand(message)
-        command.run()
+        await command.run()
         bot_mock.send_message.assert_called_once_with(
             chat_id=message.chat.id,
             text=command.HELP_MESSAGE,
@@ -47,7 +48,8 @@ class TestHelpCommand:
 
 class TestExplainCommand:
 
-    def test_explain_success(self, mocker: MockerFixture, message: Message) -> None:
+    @pytest.mark.asyncio
+    async def test_explain_success(self, mocker: MockerFixture, message: Message) -> None:
         bot_mock = mocker.MagicMock(spec=Bot)
         _ = mocker.patch(
             "memebot.explainer.firestore",
@@ -94,6 +96,6 @@ class TestExplainCommand:
         )
         message._freeze()
         command = commands.ExplainCommand(message)
-        command.run()
+        await command.run()
         assert model_mock.generate_content.call_count == 1
         assert bot_mock.send_message.call_count == 1

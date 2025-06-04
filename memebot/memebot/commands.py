@@ -19,7 +19,7 @@ class CommandInterface(abc.ABC):
 
     @abc.abstractmethod
     def run(self) -> None:
-        pass
+        ...
 
 
 class HelpCommand(CommandInterface):
@@ -27,8 +27,8 @@ class HelpCommand(CommandInterface):
     HELP_MESSAGE = "Just send a picture to bot, it will forward it to the channel"
 
     @override
-    def run(self) -> None:
-        get_bot().send_message(chat_id=self.message.chat.id, text=self.HELP_MESSAGE)
+    async def run(self) -> None:
+        await get_bot().send_message(chat_id=self.message.chat.id, text=self.HELP_MESSAGE)
 
 
 class ForwardCommand(CommandInterface):
@@ -36,9 +36,9 @@ class ForwardCommand(CommandInterface):
     censor = DefaultCensor()
 
     @override
-    def run(self) -> None:
+    async def run(self) -> None:
         try:
-            self.censor.post(self.message)
+            await self.censor.post(self.message)
         except Exception as exc:
             raise ValueError(f"Couldn't forward message") from exc
 
@@ -49,7 +49,7 @@ class ExplainCommand(CommandInterface):
     def explainer(self) -> Explainer:
         return get_explainer()
 
-    def validate(self, message: Message) -> bool:
+    async def validate(self, message: Message) -> bool:
         """Check the message is sent in a super-group
         and there is a picture to explain"""
         # if the message is missing required attributes, it's ignored
@@ -58,12 +58,12 @@ class ExplainCommand(CommandInterface):
             or (message.chat.id != get_channel_id())
             or (message.reply_to_message.sender_chat.id != get_channel_id())
         ):
-            get_bot().send_message(
+            await get_bot().send_message(
                 chat_id=message.chat.id, text="Explain works just in channel chats"
             )
             return False
         if message.reply_to_message.photo is None:
-            get_bot().send_message(
+            await get_bot().send_message(
                 chat_id=message.chat.id,
                 text="Can comment just photos for yet, no photo found.",
             )
@@ -71,9 +71,9 @@ class ExplainCommand(CommandInterface):
         return True
 
     @override
-    def run(self) -> None:
-        if self.validate(self.message):
-            asyncio.run(self.explainer.explain(self.message))
+    async def run(self) -> None:
+        if await self.validate(self.message):
+            await self.explainer.explain(self.message)
 
 
 COMMAND_REGISTRY = dict(
