@@ -17,13 +17,13 @@ class CommandInterface(abc.ABC):
         self.message = message
 
     @abc.abstractmethod
-    def run(self) -> None:
+    async def run(self) -> None:
         ...
 
 
 class IgnoreCommand(CommandInterface):
     @override
-    def run(self) -> None: ...
+    async def run(self) -> None: ...
 
 
 class HelpCommand(CommandInterface):
