@@ -14,8 +14,7 @@ class CommandInterface(abc.ABC):
         self.message = message
 
     @abc.abstractmethod
-    def run(self) -> None:
-        pass
+    def run(self) -> None: ...
 
 
 class HelpCommand(CommandInterface):
@@ -29,6 +28,11 @@ class HelpCommand(CommandInterface):
         )
 
 
+class IgnoreCommand(CommandInterface):
+    @override
+    def run(self) -> None: ...
+
+
 class ForwardCommand(CommandInterface):
 
     censor = DefaultCensor()
@@ -39,7 +43,7 @@ class ForwardCommand(CommandInterface):
             chat_id = self.message["chat"]["id"]
             user = self.message["from"]
             user_id = user["id"]
-            self.censor.post(chat_id, user_id, self.message)
+            self.censor.post(chat_id=chat_id, user_id=user_id, message=self.message)
         except Exception as exc:
             raise ValueError(f"Couldn't forward message") from exc
 
@@ -62,4 +66,7 @@ def build_command(message: dict) -> CommandInterface:
             raise ValueError(f"Unhandled message type {command_type}") from exc
         return command_cls(message)
     # regular messages
-    return COMMAND_REGISTRY["forward"](message)
+    # make sure it's a private chat, not the group discussion
+    if message.get("chat", dict()).get("type") == "private":
+        return COMMAND_REGISTRY["forward"](message)
+    return IgnoreCommand(message)
