@@ -1,4 +1,4 @@
-from functools import cache
+from functools import cache, cached_property
 from io import BytesIO
 from memebot.config import MODEL_NAME
 from telegram import Message
@@ -37,7 +37,10 @@ class Explainer:
                 candidate_count=1
             ),
         )
-        self.db = firestore.Client()
+
+    @cached_property
+    def db(self) -> firestore.Client:
+        return firestore.Client()
 
     def __check(self, message: Message) -> bool:
         since = datetime.now(timezone.utc) - timedelta(hours=self.n_hour_limit)

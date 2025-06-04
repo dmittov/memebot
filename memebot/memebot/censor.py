@@ -24,14 +24,13 @@ class CensorResult:
 
 class AbstractCensor(abc.ABC):
     @abc.abstractmethod
-    def check(self, uid: int) -> bool:
-        pass
+    def check(self, user_id: int) -> CensorResult: ...
 
     @abc.abstractmethod
-    def register(self, uid: int, message_id: int) -> None:
-        pass
+    def register(self, user_id: int, message_id: int, dt: datetime) -> None: ...
 
     def post(self, message: Message) -> None:
+        # self, chat_id: int, user_id: int, message: dict
         check_result = self.check(message.from_user.id)
         if check_result.is_allowed:
             response = get_bot().forward_message(
@@ -41,7 +40,7 @@ class AbstractCensor(abc.ABC):
             )
             logger.info(response)
             self.register(
-                uid=message.from_user.id,
+                user_id=message.from_user.id,
                 message_id=response.message_id,
             )
         get_bot().send_message(
@@ -51,18 +50,25 @@ class AbstractCensor(abc.ABC):
 
 
 class SimpleTimeCensor(AbstractCensor):
-    def __init__(self) -> None:
-        self.db = firestore.Client()
 
-    def __is_banned(self, user_id: int) -> bool:
-        _ = user_id
-        return False
+    firestore_ttl = timedelta(hours=25)
+    time_horizon = timedelta(hours=24)
+    n_message_limit = 2
+    tz = ZoneInfo("Europe/Berlin")
+
+    @cached_property
+    def db(self) -> firestore.Client:
+        # Client is not pooled, it's a fair connection
+        # according to a doc, pooling is not needed due sharing a channel
+        # between clients
+        # TODO:
+        # But the connection may fail, need a custom pool to handle it
+        return firestore.Client()
 
     @override
-    def register(self, user_id: int, message_id: int) -> None:
-        now = datetime.now(timezone.utc)
+    def register(self, user_id: int, message_id: int, dt: datetime) -> None:
         uid = str(user_id)
-        minute = now.strftime("%Y%m%d%H%M")
+        minute = dt.strftime("%Y%m%d%H%M")
         bucket_id = f"{uid}_{minute}"
         bucket_ref = (
             self.db.collection("posts")
@@ -72,43 +78,56 @@ class SimpleTimeCensor(AbstractCensor):
         )
         bucket_ref.set(
             {
-                "ts": now.replace(second=0, microsecond=0),
-                "expiresAt": now + timedelta(hours=25),
+                "ts": dt.replace(second=0, microsecond=0),
+                "expiresAt": dt + self.firestore_ttl,
                 "count": Increment(1),
-            }
+            },
+            merge=True,
         )
         self.db.collection("messages").document().set(
             {
                 "uid": uid,
                 "createdAt": firestore.SERVER_TIMESTAMP,
-                "expiresAt": now + timedelta(hours=25),
+                "expiresAt": dt + self.firestore_ttl,
                 "message_id": message_id,
             }
         )
 
     @override
     def check(self, user_id: int) -> CensorResult:
-        # <=2 posts for the last 24 hours
-        if self.__is_banned(user_id):
-            return CensorResult(is_allowed=False, reason="You are banned")
-        since = datetime.now(timezone.utc) - timedelta(hours=24)
+        # <=n posts for the last x hours [self.time_horizon]
+        since = datetime.now(timezone.utc) - self.time_horizon
         uid = str(user_id)
         buckets = (
             self.db.collection("posts")
             .document(uid)
             .collection("minutes")
             .where(filter=FieldFilter("ts", ">=", since))
+            .order_by("ts", direction=firestore.Query.DESCENDING)
         )
         n_msg = 0
         for doc in buckets.stream():
-            n_msg += doc.to_dict().get("count", 0)
-        if n_msg >= 2:
-            return CensorResult(
-                is_allowed=False, reason="You have 2+ posts in the last 24 hours"
-            )
+            doc_dict = doc.to_dict()
+            n_msg += doc_dict.get("count", 0)
+            can_post_from = (doc_dict["ts"] + self.time_horizon).astimezone(self.tz)
+            if n_msg >= self.n_message_limit:
+                return CensorResult(
+                    is_allowed=False,
+                    reason=(
+                        f"You have {self.n_message_limit}+ posts in the last {self.time_horizon}\n"
+                        f"You can post from {can_post_from}"
+                    ),
+                )
+        n_msg_left = max(self.n_message_limit - n_msg - 1, 0)
+        reason = f"Message sent, {n_msg_left} left for today"
+        if (n_msg > 0) and (n_msg_left == 0):
+            reason += f"\nYou can create next post from {can_post_from}"
         return CensorResult(
             is_allowed=True,
-            reason=f"Message sent, {max(2 - n_msg - 1, 0)} left for today",
+            # The check is performed just before the message is sent
+            # do -1, because is the check is positive, then the message that is
+            # about to be send and reported is not counted yet
+            reason=reason,
         )
 
 
