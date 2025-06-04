@@ -8,8 +8,9 @@ from typing import override
 
 from google.cloud import firestore
 from google.cloud.firestore import FieldFilter, Increment
+from telegram import Message
 
-from memebot.message import MessageUtil
+from memebot.config import get_bot
 
 logger = getLogger(__name__)
 
@@ -34,15 +35,23 @@ class CensorAbstract(abc.ABC):
     def register(self, uid: int, message_id: int) -> None:
         pass
 
-    def post(self, chat_id: int, uid: int, message: dict) -> None:
-        check_result = self.check(uid)
+    def post(self, message: Message) -> None:
+        check_result = self.check(message.from_user.id)
         if check_result.is_allowed:
-            response = MessageUtil().forward_message(
-                get_channel_id(), chat_id, message["message_id"]
+            response = get_bot().forward_message(
+                chat_id=get_channel_id(),
+                from_chat_id=message.chat.id,
+                message_id=message.message_id,
             )
-            logger.info(response.json())
-            self.register(uid, response.json()["result"]["message_id"])
-        MessageUtil().send_message(chat_id, check_result.reason)
+            logger.info(response)
+            self.register(
+                uid=message.from_user.id,
+                message_id=response.message_id,
+            )
+        get_bot().send_message(
+            chat_id=message.chat.id,
+            text=check_result.reason
+        )
 
 
 class SimpleTimeCensor(CensorAbstract):

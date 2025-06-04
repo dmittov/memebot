@@ -4,3 +4,4 @@ gunicorn>=21.2,<22.0
 google-cloud-firestore>=2.13,<3.0
 google-cloud-secret-manager>=2.23.3,<3.0
 google-cloud-aiplatform>=1.96.0,<2.0
+python-telegram-bot>=22.1.0,<=23.0

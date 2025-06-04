@@ -1,15 +1,7 @@
 import pytest
 from pytest_mock import MockerFixture
+from telegram import Message
 import memebot.commands as commands
-
-
-@pytest.fixture
-def base_message():
-    """Minimal Telegram-style message structure reused in several tests."""
-    return {
-        "chat": {"id": 111},
-        "from": {"id": 222},
-    }
 
 
 @pytest.mark.parametrize(
@@ -21,23 +13,28 @@ def base_message():
         ("any other text", commands.ForwardCommand),
     ],
 )
-def test_build_command_selects_correct_class(base_message, text, expected_cls):
-    base_message["text"] = text
-    cmd = commands.build_command(base_message)
+def test_build_command_selects_correct_class(message: Message, text, expected_cls):
+    message._unfreeze()
+    message.text = text
+    message._freeze()
+    cmd = commands.build_command(message=message)
     assert isinstance(cmd, expected_cls)
 
 
 class TestHelpCommand:
 
-    def test_run_success(self, mocker: MockerFixture, base_message: dict) -> None:
+    def test_run_success(self, mocker: MockerFixture, message: Message) -> None:
         MessageUtilMock = mocker.patch(
             "memebot.commands.MessageUtil",
             autospec=True,
         )
-        message = base_message | dict(text="/help")
+        message._unfreeze()
+        message.text = "/help"
+        message._freeze()
+        # message = base_message | dict(text="/help")
         command = commands.HelpCommand(message)
         command.run()
         MessageUtilMock.return_value.send_message.assert_called_once_with(
-            chat_id=base_message["chat"]["id"],
+            chat_id=message.chat.id,
             text=command.HELP_MESSAGE,
         )

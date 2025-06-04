@@ -2,7 +2,10 @@ import abc
 from logging import getLogger
 from typing import final, override
 
+from telegram import Message
+
 from memebot.censor import DefaultCensor
+from memebot.explainer import Explainer, get_explainer
 from memebot.message import MessageUtil
 
 logger = getLogger(__name__)
@@ -10,7 +13,7 @@ logger = getLogger(__name__)
 
 class CommandInterface(abc.ABC):
     @final
-    def __init__(self, message: dict) -> None:
+    def __init__(self, message: Message) -> None:
         self.message = message
 
     @abc.abstractmethod
@@ -25,7 +28,7 @@ class HelpCommand(CommandInterface):
     @override
     def run(self) -> None:
         MessageUtil().send_message(
-            chat_id=self.message["chat"]["id"], text=self.HELP_MESSAGE
+            chat_id=self.message.chat.id, text=self.HELP_MESSAGE
         )
 
 
@@ -36,23 +39,39 @@ class ForwardCommand(CommandInterface):
     @override
     def run(self) -> None:
         try:
-            chat_id = self.message["chat"]["id"]
-            user = self.message["from"]
-            user_id = user["id"]
-            self.censor.post(chat_id, user_id, self.message)
+            self.censor.post(self.message)
         except Exception as exc:
             raise ValueError(f"Couldn't forward message") from exc
+
+
+class ExplainCommand(CommandInterface):
+    
+    explainer: Explainer = get_explainer()
+
+    def validate(self, message: Message) -> None:
+        """Check the message is sent in a super-group
+        and there is a picture to explain"""
+        ...
+
+    @override
+    def run(self) -> None:
+        try:
+            self.validate(self.message)
+            self.explainer.explain(self.message)
+        except Exception as exc:
+            raise ValueError(f"Couldn't explain") from exc
 
 
 COMMAND_REGISTRY = dict(
     help=HelpCommand,
     start=HelpCommand,
     forward=ForwardCommand,
+    explain=ExplainCommand,
 )
 
 
-def build_command(message: dict) -> CommandInterface:
-    text = message.get("text", "")
+def build_command(message: Message) -> CommandInterface:
+    text = message.text if message.text else ""
     # bot commands
     if text.startswith("/"):
         try:

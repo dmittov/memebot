@@ -1,4 +1,5 @@
 from flask.testing import FlaskClient
+from telegram import Message, Update
 
 
 class TestMain:
@@ -14,30 +15,19 @@ class TestWebhook:
         payload = "No Json Payload"
         response = client.post(self.link, data=payload)
         assert response.status_code == 200
-        assert response.text == "ignored"
+        assert response.text == "ignored, invalid update format"
 
     def test_no_message(self, client: FlaskClient) -> None:
-        payload = {
-            "poll": {
-                "id": 42,
-                "question": "?",
-                "options": [
-                    {"text": "red", "voter_count": 100},
-                    {"text": "blue", "voter_count": 100},
-                ],
-            }
-        }
-        response = client.post(self.link, json=payload)
+        update = Update(update_id=1)
+        response = client.post(self.link, json=update.to_dict())
         assert response.status_code == 200
-        assert response.text == "ignored"
+        assert response.text == "ignored, no message"
 
-    def test_message_help(self, client: FlaskClient) -> None:
-        payload = {
-            "message": {
-                "message_id": 42,
-                "text": "/help",
-            }
-        }
-        response = client.post(self.link, json=payload)
+    def test_message_help(self, client: FlaskClient, message: Message) -> None:
+        message._unfreeze()
+        message.text = "/help"
+        message._freeze()
+        update = Update(update_id=1, message=message)
+        response = client.post(self.link, json=update.to_dict())
         assert response.status_code == 200
         assert response.text == "OK"
