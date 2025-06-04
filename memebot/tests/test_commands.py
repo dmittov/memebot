@@ -50,6 +50,10 @@ class TestExplainCommand:
     def test_explain_success(self, mocker: MockerFixture, message: Message) -> None:
         bot_mock = mocker.MagicMock(spec=Bot)
         _ = mocker.patch(
+            "memebot.explainer.firestore",
+            autospec=True
+        )
+        _ = mocker.patch(
             "memebot.explainer.get_bot",
             return_value=bot_mock,
         )

@@ -3,16 +3,23 @@ from io import BytesIO
 from memebot.config import MODEL_NAME
 from telegram import Message
 import vertexai
+from datetime import datetime, timezone, timedelta
 from vertexai.generative_models import GenerativeModel, GenerationConfig, Part, Image
 from memebot.config import get_bot
+from google.cloud import firestore
+from google.cloud.firestore import FieldFilter
 import logging
 
 logger = logging.getLogger(__name__)
 
 
 class Explainer:
+    # TODO: fix race condition
+    # TODO: check allows another request in 24hrs
 
     def __init__(self, model_name: str) -> None:
+        self.n_generations_limit = 10
+        self.n_hour_limit = 24
         self.model = GenerativeModel(
             model_name=model_name,
             system_instruction=(
@@ -29,6 +36,44 @@ class Explainer:
                 temperature=0.0,
                 candidate_count=1
             ),
+        )
+        self.db = firestore.Client()
+
+    def __check(self, message: Message) -> bool:
+        since = datetime.now(timezone.utc) - timedelta(hours=self.n_hour_limit)
+        buckets = (
+            self.db.collection("llm_requests")
+            .where(filter=FieldFilter("ts", ">=", since))
+        )
+        n_requests = 0
+        for doc in buckets.stream():
+            n_requests += 1
+            if message.reply_to_message.id == doc.to_dict().get("message_id", 0):
+                get_bot().send_message(
+                    chat_id=message.chat.id,
+                    text="This meme was already explained",
+                )
+                return False
+            if n_requests >= self.n_generations_limit:
+                get_bot().send_message(
+                    chat_id=message.chat.id,
+                    text=f"Too many requests per {self.n_hour_limit} hours",
+                )
+                return False
+        return True
+
+    def __register(self, message: Message) -> None:
+        now = datetime.now(timezone.utc)
+        bucket_id = f"{message.reply_to_message.id}"
+        bucket_ref = (
+            self.db.collection("llm_requests")
+            .document(bucket_id)
+        )
+        bucket_ref.set(
+            {
+                "expiresAt": now + timedelta(hours=self.n_hour_limit),
+                "message_id": message.reply_to_message.id,
+            }
         )
 
     async def get_image(self, message: Message) -> Image:
@@ -47,6 +92,8 @@ class Explainer:
         return Image.from_bytes(buffer.read())
 
     async def explain(self, message: Message) -> None:
+        if not self.__check(message=message):
+            return
         image = await self.get_image(message=message)
         # TODO: support caption
         caption = (
@@ -70,6 +117,7 @@ class Explainer:
             )
         explanation = response.candidates[0].content.parts[0]
         get_bot().send_message(chat_id=message.chat.id, text=explanation)
+        self.__register(message=message)
 
 
 @cache
