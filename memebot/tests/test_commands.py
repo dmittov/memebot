@@ -32,7 +32,11 @@ class TestHelpCommand:
     async def test_run_success(self, mocker: MockerFixture, message: Message) -> None:
         bot_mock = mocker.MagicMock(spec=Bot)
         _ = mocker.patch(
-            "memebot.commands.get_bot",
+            "memebot.commands.get_token",
+            return_value="NoToken",
+        )
+        _ = mocker.patch(
+            "memebot.commands.Bot",
             return_value=bot_mock,
         )
         message._unfreeze()
@@ -56,7 +60,11 @@ class TestExplainCommand:
             autospec=True
         )
         _ = mocker.patch(
-            "memebot.explainer.get_bot",
+            "memebot.explainer.get_token",
+            return_value="NoToken",
+        )
+        _ = mocker.patch(
+            "memebot.explainer.Bot",
             return_value=bot_mock,
         )
         model_mock = mocker.MagicMock(spec=GenerativeModel)

@@ -1,11 +1,11 @@
 from functools import cache, cached_property
 from io import BytesIO
 from memebot.config import MODEL_NAME
-from telegram import Message
+from telegram import Message, Bot
 import vertexai
 from datetime import datetime, timezone, timedelta
 from vertexai.generative_models import GenerativeModel, GenerationConfig, Part, Image
-from memebot.config import get_bot
+from memebot.config import get_token
 from google.cloud import firestore
 from google.cloud.firestore import FieldFilter
 import logging
@@ -42,7 +42,7 @@ class Explainer:
     def db(self) -> firestore.Client:
         return firestore.Client()
 
-    def __check(self, message: Message) -> bool:
+    async def __check(self, message: Message) -> bool:
         since = datetime.now(timezone.utc) - timedelta(hours=self.n_hour_limit)
         buckets = (
             self.db.collection("llm_requests")
@@ -52,14 +52,16 @@ class Explainer:
         for doc in buckets.stream():
             n_requests += 1
             if message.reply_to_message.id == doc.to_dict().get("message_id", 0):
-                get_bot().send_message(
+                await Bot(token=get_token()).send_message(
                     chat_id=message.chat.id,
+                    reply_to_message_id=message.id,
                     text="This meme was already explained",
                 )
                 return False
             if n_requests >= self.n_generations_limit:
-                get_bot().send_message(
+                await Bot(token=get_token()).send_message(
                     chat_id=message.chat.id,
+                    reply_to_message_id=message.id,
                     text=f"Too many requests per {self.n_hour_limit} hours",
                 )
                 return False
@@ -88,16 +90,18 @@ class Explainer:
             ),
             key=lambda photo: photo.file_size
         )
-        hfile = await get_bot().get_file(file_record.file_id)
+        hfile = await Bot(token=get_token()).get_file(file_record.file_id)
         buffer = BytesIO()
         await hfile.download_to_memory(out=buffer)
         buffer.seek(0)
         return Image.from_bytes(buffer.read())
 
     async def explain(self, message: Message) -> None:
-        if not self.__check(message=message):
+        logger.info("Running explain")
+        if not (await self.__check(message=message)):
             return
         image = await self.get_image(message=message)
+        logger.info("Downloaded image: %d", len(image.data))
         # TODO: support caption
         caption = (
             "Meme: " 
@@ -118,8 +122,14 @@ class Explainer:
                 "Found more than 1 [%d] part",
                 len(response.candidates[0].content.parts),
             )
-        explanation = response.candidates[0].content.parts[0]
-        get_bot().send_message(chat_id=message.chat.id, text=explanation)
+        explanation = response.candidates[0].content.parts[0].text
+        logger.info(explanation)
+        logger.info("Going to send to %d", message.chat.id)
+        await Bot(token=get_token()).send_message(
+            chat_id=message.chat.id,
+            reply_to_message_id=message.id,
+            text=explanation
+        )
         self.__register(message=message)
 
 

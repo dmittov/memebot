@@ -1,13 +1,12 @@
 import abc
-import asyncio
 from logging import getLogger
 from typing import final, override
 
-from telegram import Message
+from telegram import Message, Bot
 
 from memebot.censor import DefaultCensor
 from memebot.explainer import Explainer, get_explainer
-from memebot.config import get_bot, get_channel_id
+from memebot.config import get_channel_id, get_token
 
 logger = getLogger(__name__)
 
@@ -28,7 +27,7 @@ class HelpCommand(CommandInterface):
 
     @override
     async def run(self) -> None:
-        await get_bot().send_message(chat_id=self.message.chat.id, text=self.HELP_MESSAGE)
+        await Bot(token=get_token()).send_message(chat_id=self.message.chat.id, text=self.HELP_MESSAGE)
 
 
 class ForwardCommand(CommandInterface):
@@ -53,26 +52,42 @@ class ExplainCommand(CommandInterface):
         """Check the message is sent in a super-group
         and there is a picture to explain"""
         # if the message is missing required attributes, it's ignored
-        if (
-            (message.chat.type != "supergroup")
-            or (message.chat.id != get_channel_id())
-            or (message.reply_to_message.sender_chat.id != get_channel_id())
-        ):
-            await get_bot().send_message(
-                chat_id=message.chat.id, text="Explain works just in channel chats"
+        # if (
+        #     (message.chat.type != "supergroup")
+        #     or (message.reply_to_message.sender_chat.id != get_channel_id())
+        # ):
+        #     await get_bot().send_message(
+        #         chat_id=message.chat.id, text="Explain works just in channel chats"
+        #     )
+        #     return False
+        logger.info(message)
+        if message.chat.type != "supergroup":
+            await Bot(token=get_token()).send_message(
+                chat_id=message.chat.id,
+                reply_to_message_id=message.id,
+                text=f"message.chat.type = {message.chat.type} instead of supregroup"
+            )
+            return False
+        if message.reply_to_message.sender_chat.id != get_channel_id():
+            await Bot(token=get_token()).send_message(
+                chat_id=message.chat.id,
+                reply_to_message_id=message.id,
+                text=f"message.reply_to_message.sender_chat.id = {message.reply_to_message.sender_chat.id} instead of {get_channel_id()}"
             )
             return False
         if message.reply_to_message.photo is None:
-            await get_bot().send_message(
+            await Bot(token=get_token()).send_message(
                 chat_id=message.chat.id,
+                reply_to_message_id=message.id,
                 text="Can comment just photos for yet, no photo found.",
             )
             return False
+        logger.info("Try to perform explain")
         return True
 
     @override
     async def run(self) -> None:
-        if await self.validate(self.message):
+        if (await self.validate(self.message)):
             await self.explainer.explain(self.message)
 
 

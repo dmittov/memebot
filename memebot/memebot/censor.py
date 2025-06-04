@@ -9,9 +9,9 @@ from functools import cached_property
 
 from google.cloud import firestore
 from google.cloud.firestore import FieldFilter, Increment
-from telegram import Message
+from telegram import Message, Bot
 
-from memebot.config import get_bot, get_channel_id
+from memebot.config import get_token, get_channel_id
 
 logger = getLogger(__name__)
 
@@ -33,7 +33,7 @@ class AbstractCensor(abc.ABC):
         # self, chat_id: int, user_id: int, message: dict
         check_result = self.check(message.from_user.id)
         if check_result.is_allowed:
-            response = await get_bot().forward_message(
+            response = await Bot(token=get_token()).forward_message(
                 chat_id=get_channel_id(),
                 from_chat_id=message.chat.id,
                 message_id=message.message_id,
@@ -44,7 +44,7 @@ class AbstractCensor(abc.ABC):
                 message_id=response.message_id,
                 dt=datetime.now(timezone.utc),
             )
-        await get_bot().send_message(
+        await Bot(token=get_token()).send_message(
             chat_id=message.chat.id,
             text=check_result.reason
         )

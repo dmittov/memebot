@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 import traceback
 from logging import getLogger
 
 from flask import Flask, request
-from telegram import Update
+from telegram import Update, Bot
 
 from memebot.commands import CommandInterface, build_command
-from memebot.config import get_bot
+from memebot.config import get_token
 
 app = Flask(__name__)
 logger = getLogger(__name__)
@@ -49,7 +48,7 @@ async def telegram_webhook():
     return "OK", 200
 
 
-async def main() -> None:
+def setup_webhook() -> None:
     if webhook_url := os.getenv("WEBHOOK_URL"):
         # https://core.telegram.org/bots/api#setwebhook
         # allowed_updates = all types except
@@ -85,7 +84,9 @@ async def main() -> None:
             "removed_chat_boost",
         ]
         try:
-            await get_bot().set_webhook(
+            app.ensure_sync(
+                Bot(token=get_token()).set_webhook
+            )(
                 url=webhook_url,
                 allowed_updates=allowed_updates,
             )
@@ -94,4 +95,4 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    setup_webhook()

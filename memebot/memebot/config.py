@@ -1,3 +1,4 @@
+import asyncio
 from functools import cache
 import logging
 import os
@@ -14,18 +15,19 @@ def get_secret(resource_name: str) -> str:
 
 
 @cache
-def get_bot() -> Bot:
-    token = (
-        get_secret(token_path) 
-        if (token_path := os.getenv("TELEGRAM_TOKEN")) 
-        else "NoToken"
-    )
-    return Bot(token=token)
+def get_token() -> str:
+    token_path = os.getenv("TELEGRAM_TOKEN", "NoToken")
+    return get_secret(token_path)
 
 
 @cache
-def get_channel_id() -> str:
-    return os.getenv("CHANNEL_ID", "@NoChannel")
+def get_channel_id() -> int:
+    return int(os.getenv("CHANNEL_ID", "0"))
+
+
+@cache
+def get_chat_id() -> int:
+    return int(os.getenv("CHAT_ID", "1"))
 
 
 ADMINS = {int(uid) for uid in os.getenv("ADMIN_IDS", "").split(",") if uid.strip()}
