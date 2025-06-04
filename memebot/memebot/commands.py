@@ -1,4 +1,5 @@
 import abc
+import asyncio
 from logging import getLogger
 from typing import final, override
 
@@ -6,7 +7,7 @@ from telegram import Message
 
 from memebot.censor import DefaultCensor
 from memebot.explainer import Explainer, get_explainer
-from memebot.message import MessageUtil
+from memebot.config import get_bot, get_channel_id
 
 logger = getLogger(__name__)
 
@@ -27,9 +28,7 @@ class HelpCommand(CommandInterface):
 
     @override
     def run(self) -> None:
-        MessageUtil().send_message(
-            chat_id=self.message.chat.id, text=self.HELP_MESSAGE
-        )
+        get_bot().send_message(chat_id=self.message.chat.id, text=self.HELP_MESSAGE)
 
 
 class ForwardCommand(CommandInterface):
@@ -45,21 +44,36 @@ class ForwardCommand(CommandInterface):
 
 
 class ExplainCommand(CommandInterface):
-    
-    explainer: Explainer = get_explainer()
 
-    def validate(self, message: Message) -> None:
+    @property
+    def explainer(self) -> Explainer:
+        return get_explainer()
+
+    def validate(self, message: Message) -> bool:
         """Check the message is sent in a super-group
         and there is a picture to explain"""
-        ...
+        # if the message is missing required attributes, it's ignored
+        if (
+            (message.chat.type != "supergroup")
+            or (message.chat.id != get_channel_id())
+            or (message.reply_to_message.sender_chat.id != get_channel_id())
+        ):
+            get_bot().send_message(
+                chat_id=message.chat.id, text="Explain works just in channel chats"
+            )
+            return False
+        if message.reply_to_message.photo is None:
+            get_bot().send_message(
+                chat_id=message.chat.id,
+                text="Can comment just photos for yet, no photo found.",
+            )
+            return False
+        return True
 
     @override
     def run(self) -> None:
-        try:
-            self.validate(self.message)
-            self.explainer.explain(self.message)
-        except Exception as exc:
-            raise ValueError(f"Couldn't explain") from exc
+        if self.validate(self.message):
+            asyncio.run(self.explainer.explain(self.message))
 
 
 COMMAND_REGISTRY = dict(

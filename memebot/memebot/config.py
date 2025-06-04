@@ -23,6 +23,11 @@ def get_bot() -> Bot:
     return Bot(token=token)
 
 
+@cache
+def get_channel_id() -> str:
+    return os.getenv("CHANNEL_ID", "@NoChannel")
+
+
 ADMINS = {int(uid) for uid in os.getenv("ADMIN_IDS", "").split(",") if uid.strip()}
 MODEL_NAME = os.getenv("MODEL_NAME", "no_model")
 

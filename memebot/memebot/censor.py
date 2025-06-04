@@ -10,14 +10,9 @@ from google.cloud import firestore
 from google.cloud.firestore import FieldFilter, Increment
 from telegram import Message
 
-from memebot.config import get_bot
+from memebot.config import get_bot, get_channel_id
 
 logger = getLogger(__name__)
-
-
-@cache
-def get_channel_id() -> str:
-    return os.getenv("CHANNEL_ID", "@NoChannel")
 
 
 @dataclass(frozen=True)

@@ -22,6 +22,6 @@ def message() -> Generator[Message, None, None]:
         "message_id": 777,
         "chat": {"id": 111, "type": "private"},
         "from": {"id": 666, "is_bot": False, "first_name": "Tester"},
-        "date": int(datetime.datetime.utcnow().timestamp()),
+        "date": int(datetime.datetime.now(datetime.timezone.utc).timestamp()),
     })
     yield message
