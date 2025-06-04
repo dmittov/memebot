@@ -21,6 +21,11 @@ class CommandInterface(abc.ABC):
         ...
 
 
+class IgnoreCommand(CommandInterface):
+    @override
+    def run(self) -> None: ...
+
+
 class HelpCommand(CommandInterface):
 
     HELP_MESSAGE = "Just send a picture to bot, it will forward it to the channel"
@@ -110,4 +115,7 @@ def build_command(message: Message) -> CommandInterface:
             raise ValueError(f"Unhandled message type {command_type}") from exc
         return command_cls(message)
     # regular messages
-    return COMMAND_REGISTRY["forward"](message)
+    # make sure it's a private chat, not the group discussion
+    if message.chat.type == "private":
+        return COMMAND_REGISTRY["forward"](message)
+    return IgnoreCommand(message)
