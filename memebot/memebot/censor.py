@@ -44,9 +44,7 @@ class AbstractCensor(abc.ABC):
                 message_id=response.message_id,
                 dt=datetime.now(timezone.utc),
             )
-        await Bot(token=get_token()).send_message(
-            chat_id=message.chat.id, text=check_result.reason
-        )
+        await Bot(token=get_token()).send_message(chat_id=message.chat.id, text=check_result.reason)
 
 
 class SimpleTimeCensor(AbstractCensor):
@@ -70,12 +68,7 @@ class SimpleTimeCensor(AbstractCensor):
         uid = str(user_id)
         minute = dt.strftime("%Y%m%d%H%M")
         bucket_id = f"{uid}_{minute}"
-        bucket_ref = (
-            self.db.collection("posts")
-            .document(uid)
-            .collection("minutes")
-            .document(bucket_id)
-        )
+        bucket_ref = self.db.collection("posts").document(uid).collection("minutes").document(bucket_id)
         bucket_ref.set(
             {
                 "ts": dt.replace(second=0, microsecond=0),

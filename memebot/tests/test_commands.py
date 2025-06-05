@@ -54,9 +54,7 @@ class TestHelpCommand:
 class TestExplainCommand:
 
     @pytest.mark.asyncio
-    async def test_explain_success(
-        self, mocker: MockerFixture, message: Message
-    ) -> None:
+    async def test_explain_success(self, mocker: MockerFixture, message: Message) -> None:
         bot_mock = mocker.MagicMock(spec=Bot)
         _ = mocker.patch("memebot.explainer.firestore", autospec=True)
         _ = mocker.patch(

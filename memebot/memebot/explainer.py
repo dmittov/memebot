@@ -33,9 +33,7 @@ class Explainer:
                 " Объясни мем. Является ли он смешным?"
                 " Какую ты ему поставишь оценку по шкале от 1 до 10?"
             ),
-            generation_config=GenerationConfig(
-                max_output_tokens=1000, temperature=0.0, candidate_count=1
-            ),
+            generation_config=GenerationConfig(max_output_tokens=1000, temperature=0.0, candidate_count=1),
         )
 
     @cached_property
@@ -44,9 +42,7 @@ class Explainer:
 
     async def __check(self, message: Message) -> bool:
         since = datetime.now(timezone.utc) - timedelta(hours=self.n_hour_limit)
-        buckets = self.db.collection("llm_requests").where(
-            filter=FieldFilter("ts", ">=", since)
-        )
+        buckets = self.db.collection("llm_requests").where(filter=FieldFilter("ts", ">=", since))
         n_requests = 0
         for doc in buckets.stream():
             n_requests += 1
@@ -79,11 +75,7 @@ class Explainer:
 
     async def get_image(self, message: Message) -> Image:
         file_record = max(
-            (
-                photo
-                for photo in message.reply_to_message.photo
-                if photo.file_size < 100_000
-            ),
+            (photo for photo in message.reply_to_message.photo if photo.file_size < 100_000),
             key=lambda photo: photo.file_size,
         )
         hfile = await Bot(token=get_token()).get_file(file_record.file_id)
@@ -99,11 +91,7 @@ class Explainer:
         image = await self.get_image(message=message)
         logger.info("Downloaded image: %d", len(image.data))
         # TODO: support caption
-        caption = (
-            "Meme: "
-            if not message.reply_to_message.caption
-            else message.reply_to_message.caption
-        )
+        caption = "Meme: " if not message.reply_to_message.caption else message.reply_to_message.caption
         response = self.model.generate_content(
             contents=[
                 Part.from_text(caption),

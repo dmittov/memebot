@@ -31,9 +31,7 @@ class HelpCommand(CommandInterface):
 
     @override
     async def run(self) -> None:
-        await Bot(token=get_token()).send_message(
-            chat_id=self.message.chat.id, text=self.HELP_MESSAGE
-        )
+        await Bot(token=get_token()).send_message(chat_id=self.message.chat.id, text=self.HELP_MESSAGE)
 
 
 class ForwardCommand(CommandInterface):
