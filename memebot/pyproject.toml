@@ -5,6 +5,3 @@ pythonpath = "."
 [tool.mypy]
 python_version = "3.12"
 ignore_missing_imports = true
-
-[tool.black]
-line-length = 119
