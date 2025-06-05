@@ -45,8 +45,7 @@ class AbstractCensor(abc.ABC):
                 dt=datetime.now(timezone.utc),
             )
         await Bot(token=get_token()).send_message(
-            chat_id=message.chat.id,
-            text=check_result.reason
+            chat_id=message.chat.id, text=check_result.reason
         )
 
 

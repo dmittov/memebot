@@ -32,9 +32,7 @@ class Explainer:
                 " Какую ты ему поставишь оценку по шкале от 1 до 10?"
             ),
             generation_config=GenerationConfig(
-                max_output_tokens=1000,
-                temperature=0.0,
-                candidate_count=1
+                max_output_tokens=1000, temperature=0.0, candidate_count=1
             ),
         )
 
@@ -44,9 +42,8 @@ class Explainer:
 
     async def __check(self, message: Message) -> bool:
         since = datetime.now(timezone.utc) - timedelta(hours=self.n_hour_limit)
-        buckets = (
-            self.db.collection("llm_requests")
-            .where(filter=FieldFilter("ts", ">=", since))
+        buckets = self.db.collection("llm_requests").where(
+            filter=FieldFilter("ts", ">=", since)
         )
         n_requests = 0
         for doc in buckets.stream():
@@ -70,10 +67,7 @@ class Explainer:
     def __register(self, message: Message) -> None:
         now = datetime.now(timezone.utc)
         bucket_id = f"{message.reply_to_message.id}"
-        bucket_ref = (
-            self.db.collection("llm_requests")
-            .document(bucket_id)
-        )
+        bucket_ref = self.db.collection("llm_requests").document(bucket_id)
         bucket_ref.set(
             {
                 "expiresAt": now + timedelta(hours=self.n_hour_limit),
@@ -84,11 +78,11 @@ class Explainer:
     async def get_image(self, message: Message) -> Image:
         file_record = max(
             (
-                photo 
+                photo
                 for photo in message.reply_to_message.photo
                 if photo.file_size < 100_000
             ),
-            key=lambda photo: photo.file_size
+            key=lambda photo: photo.file_size,
         )
         hfile = await Bot(token=get_token()).get_file(file_record.file_id)
         buffer = BytesIO()
@@ -104,7 +98,7 @@ class Explainer:
         logger.info("Downloaded image: %d", len(image.data))
         # TODO: support caption
         caption = (
-            "Meme: " 
+            "Meme: "
             if not message.reply_to_message.caption
             else message.reply_to_message.caption
         )
@@ -126,9 +120,7 @@ class Explainer:
         logger.info(explanation)
         logger.info("Going to send to %d", message.chat.id)
         await Bot(token=get_token()).send_message(
-            chat_id=message.chat.id,
-            reply_to_message_id=message.id,
-            text=explanation
+            chat_id=message.chat.id, reply_to_message_id=message.id, text=explanation
         )
         self.__register(message=message)
 
