@@ -1,10 +1,8 @@
-import asyncio
 from functools import cache
 import logging
 import os
 
 import google.cloud.secretmanager as sm
-from telegram import Bot
 
 
 def get_secret(resource_name: str) -> str:
@@ -16,7 +14,8 @@ def get_secret(resource_name: str) -> str:
 
 @cache
 def get_token() -> str:
-    token_path = os.getenv("TELEGRAM_TOKEN", "NoToken")
+    if not (token_path := os.getenv("TELEGRAM_TOKEN")):
+        return "NoToken"
     return get_secret(token_path)
 
 
