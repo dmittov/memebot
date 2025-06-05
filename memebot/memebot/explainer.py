@@ -7,7 +7,8 @@ import vertexai
 from google.cloud import firestore
 from google.cloud.firestore import FieldFilter
 from telegram import Bot, Message
-from vertexai.generative_models import GenerationConfig, GenerativeModel, Image, Part
+from vertexai.generative_models import (GenerationConfig, GenerativeModel,
+                                        Image, Part)
 
 from memebot.config import MODEL_NAME, get_token
 
