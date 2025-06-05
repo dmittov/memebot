@@ -97,12 +97,12 @@ class ExplainCommand(CommandInterface):
             await self.explainer.explain(self.message)
 
 
-COMMAND_REGISTRY = dict(
-    help=HelpCommand,
-    start=HelpCommand,
-    forward=ForwardCommand,
-    explain=ExplainCommand,
-)
+COMMAND_REGISTRY: dict[str, type[CommandInterface]] = {
+    "help": HelpCommand,
+    "start": HelpCommand,
+    "forward": ForwardCommand,
+    "explain": ExplainCommand,
+}
 
 
 def build_command(message: Message) -> CommandInterface:
