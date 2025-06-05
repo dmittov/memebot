@@ -1,6 +1,7 @@
 import abc
 from logging import getLogger
-from typing import final, override
+from typing import final
+from typing import override
 
 from telegram import Message, Bot
 
