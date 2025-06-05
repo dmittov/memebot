@@ -1,7 +1,9 @@
 from typing import Generator
 
 import pytest
+import datetime
 from flask.testing import FlaskClient
+from telegram import Message
 
 from main import app as flask_app
 
@@ -14,9 +16,12 @@ def client() -> Generator[FlaskClient, None, None]:
 
 
 @pytest.fixture
-def base_message() -> dict:
+def message() -> Generator[Message, None, None]:
     """Minimal Telegram-style message structure reused in several tests."""
-    return {
-        "chat": {"id": 111},
-        "from": {"id": 666},
-    }
+    message = Message.de_json({
+        "message_id": 777,
+        "chat": {"id": 111, "type": "private"},
+        "from": {"id": 666, "is_bot": False, "first_name": "Tester"},
+        "date": int(datetime.datetime.now(datetime.timezone.utc).timestamp()),
+    })
+    yield message

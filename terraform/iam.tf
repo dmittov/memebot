@@ -58,3 +58,15 @@ resource "google_project_iam_member" "firestore_owner" {
   role    = "roles/datastore.owner"
   member  = "serviceAccount:${data.google_client_config.default.project}@appspot.gserviceaccount.com"
 }
+
+resource "google_project_iam_member" "sa_vertex_ai_user" {
+  project = data.google_client_config.default.project
+  role    = "roles/aiplatform.user"          # documented for Generative AI usage
+  member  = "serviceAccount:${data.google_client_config.default.project}@appspot.gserviceaccount.com"
+}
+
+resource "google_project_iam_member" "sa_serviceusage_consumer" {
+  project = data.google_client_config.default.project
+  role    = "roles/serviceusage.serviceUsageConsumer"
+  member  = "serviceAccount:${data.google_client_config.default.project}@appspot.gserviceaccount.com"
+}

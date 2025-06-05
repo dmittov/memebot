@@ -1,7 +1,10 @@
+import asyncio
+from functools import cache
 import logging
 import os
 
 import google.cloud.secretmanager as sm
+from telegram import Bot
 
 
 def get_secret(resource_name: str) -> str:
@@ -11,7 +14,24 @@ def get_secret(resource_name: str) -> str:
     return payload_bytes.decode("utf-8")
 
 
+@cache
+def get_token() -> str:
+    token_path = os.getenv("TELEGRAM_TOKEN", "NoToken")
+    return get_secret(token_path)
+
+
+@cache
+def get_channel_id() -> int:
+    return int(os.getenv("CHANNEL_ID", "0"))
+
+
+@cache
+def get_chat_id() -> int:
+    return int(os.getenv("CHAT_ID", "1"))
+
+
 ADMINS = {int(uid) for uid in os.getenv("ADMIN_IDS", "").split(",") if uid.strip()}
+MODEL_NAME = os.getenv("MODEL_NAME", "no_model")
 
 # pass log level through env
 # and configure gcs log sink
