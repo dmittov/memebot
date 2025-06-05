@@ -4,7 +4,10 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from logging import getLogger
-from typing import override
+try:
+    from typing import override  # type: ignore
+except ImportError:  # Python < 3.12
+    from typing_extensions import override
 from functools import cached_property
 
 from google.cloud import firestore

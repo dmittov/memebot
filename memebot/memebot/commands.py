@@ -1,6 +1,10 @@
 import abc
 from logging import getLogger
-from typing import final, override
+from typing import final
+try:
+    from typing import override  # type: ignore
+except ImportError:  # Python < 3.12
+    from typing_extensions import override
 
 from telegram import Message, Bot
 

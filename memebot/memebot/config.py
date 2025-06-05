@@ -33,6 +33,9 @@ def get_chat_id() -> int:
 ADMINS = {int(uid) for uid in os.getenv("ADMIN_IDS", "").split(",") if uid.strip()}
 MODEL_NAME = os.getenv("MODEL_NAME", "no_model")
 
-# pass log level through env
-# and configure gcs log sink
-logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(message)s")
+# pass log level through env and configure gcs log sink
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
+    format="%(levelname)s:%(message)s",
+)
