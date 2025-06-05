@@ -1,7 +1,7 @@
+import datetime
 from typing import Generator
 
 import pytest
-import datetime
 from flask.testing import FlaskClient
 from telegram import Message
 

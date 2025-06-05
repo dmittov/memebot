@@ -6,7 +6,7 @@ import traceback
 from logging import getLogger
 
 from flask import Flask, request
-from telegram import Update, Bot
+from telegram import Bot, Update
 
 from memebot.commands import CommandInterface, build_command
 from memebot.config import get_token

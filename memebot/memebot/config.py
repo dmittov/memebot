@@ -1,6 +1,6 @@
-from functools import cache
 import logging
 import os
+from functools import cache
 
 import google.cloud.secretmanager as sm
 

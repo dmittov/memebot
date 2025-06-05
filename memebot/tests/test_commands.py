@@ -1,11 +1,12 @@
 import datetime
+
 import pytest
 from pytest_mock import MockerFixture
+from telegram import Bot, Chat, Message, PhotoSize
 from vertexai.generative_models import GenerativeModel
-from telegram import Message, PhotoSize, Chat
+
 import memebot.commands as commands
 from memebot.config import get_channel_id
-from telegram import Bot
 from memebot.explainer import Explainer
 
 

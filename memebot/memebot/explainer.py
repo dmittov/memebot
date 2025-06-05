@@ -1,14 +1,15 @@
+import logging
+from datetime import datetime, timedelta, timezone
 from functools import cache, cached_property
 from io import BytesIO
-from memebot.config import MODEL_NAME
-from telegram import Message, Bot
+
 import vertexai
-from datetime import datetime, timezone, timedelta
-from vertexai.generative_models import GenerativeModel, GenerationConfig, Part, Image
-from memebot.config import get_token
 from google.cloud import firestore
 from google.cloud.firestore import FieldFilter
-import logging
+from telegram import Bot, Message
+from vertexai.generative_models import GenerationConfig, GenerativeModel, Image, Part
+
+from memebot.config import MODEL_NAME, get_token
 
 logger = logging.getLogger(__name__)
 

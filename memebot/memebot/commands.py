@@ -1,13 +1,12 @@
 import abc
 from logging import getLogger
-from typing import final
-from typing import override
+from typing import final, override
 
-from telegram import Message, Bot
+from telegram import Bot, Message
 
 from memebot.censor import DefaultCensor
-from memebot.explainer import Explainer, get_explainer
 from memebot.config import get_channel_id, get_token
+from memebot.explainer import Explainer, get_explainer
 
 logger = getLogger(__name__)
 
