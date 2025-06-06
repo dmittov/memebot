@@ -6,7 +6,7 @@ import traceback
 from logging import getLogger
 
 from flask import Flask, request
-from telegram import Update, Bot
+from telegram import Bot, Update
 
 from memebot.commands import CommandInterface, build_command
 from memebot.config import get_token
@@ -26,7 +26,7 @@ async def telegram_webhook():
         update: Update = Update.de_json(
             data=request.get_json(force=True, silent=True) or {},
             bot=None,
-        ) 
+        )
         logger.debug("update: %s", update)
     except TypeError as exc:
         logger.error("Invalid update format: %s", str(exc))
@@ -84,9 +84,7 @@ def setup_webhook() -> None:
             "removed_chat_boost",
         ]
         try:
-            app.ensure_sync(
-                Bot(token=get_token()).set_webhook
-            )(
+            app.ensure_sync(Bot(token=get_token()).set_webhook)(
                 url=webhook_url,
                 allowed_updates=allowed_updates,
             )

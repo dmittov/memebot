@@ -1,11 +1,12 @@
 import datetime
+
 import pytest
 from pytest_mock import MockerFixture
+from telegram import Bot, Chat, Message, PhotoSize
 from vertexai.generative_models import GenerativeModel
-from telegram import Message, PhotoSize, Chat
+
 import memebot.commands as commands
 from memebot.config import get_channel_id
-from telegram import Bot
 from memebot.explainer import Explainer
 
 
@@ -53,12 +54,11 @@ class TestHelpCommand:
 class TestExplainCommand:
 
     @pytest.mark.asyncio
-    async def test_explain_success(self, mocker: MockerFixture, message: Message) -> None:
+    async def test_explain_success(
+        self, mocker: MockerFixture, message: Message
+    ) -> None:
         bot_mock = mocker.MagicMock(spec=Bot)
-        _ = mocker.patch(
-            "memebot.explainer.firestore",
-            autospec=True
-        )
+        _ = mocker.patch("memebot.explainer.firestore", autospec=True)
         _ = mocker.patch(
             "memebot.explainer.get_token",
             return_value="NoToken",
@@ -86,12 +86,12 @@ class TestExplainCommand:
         message.reply_to_message = Message(
             message_id=2,
             date=int(datetime.datetime.now(datetime.timezone.utc).timestamp()),
-            sender_chat= Chat(id=get_channel_id(), type="channel"),
+            sender_chat=Chat(id=get_channel_id(), type="channel"),
             chat=Chat(
                 type="supergroup",
                 id=get_channel_id(),
             ),
-            photo = [
+            photo=[
                 PhotoSize(
                     file_id="AgACAgIAAxkBAAPCaD_nTtiDmdw0A6l-iExxgpTY708AAibwMRtgXAABSnQ4QNG5CmZMAQADAgADeAADNgQ",
                     file_unique_id="AQADJvAxG2BcAAFKfQ",
