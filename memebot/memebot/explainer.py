@@ -84,7 +84,7 @@ class Explainer:
             (
                 photo
                 for photo in message.reply_to_message.photo
-                if ( photo.width < 800 and photo.height < 800 )
+                if (photo.width < 800 and photo.height < 800)
             ),
             key=lambda photo: photo.width,
         )
