@@ -49,6 +49,7 @@ class Explainer:
         n_requests = 0
         for doc in buckets.stream():
             n_requests += 1
+            assert message.reply_to_message is not None
             if message.reply_to_message.id == doc.to_dict().get("message_id", 0):
                 await Bot(token=get_token()).send_message(
                     chat_id=message.chat.id,
@@ -67,6 +68,7 @@ class Explainer:
 
     def __register(self, message: Message) -> None:
         now = datetime.now(timezone.utc)
+        assert message.reply_to_message is not None
         bucket_id = f"{message.reply_to_message.id}"
         bucket_ref = self.db.collection("llm_requests").document(bucket_id)
         bucket_ref.set(
@@ -77,13 +79,14 @@ class Explainer:
         )
 
     async def get_image(self, message: Message) -> Image:
+        assert message.reply_to_message is not None
         file_record = max(
             (
                 photo
                 for photo in message.reply_to_message.photo
-                if photo.file_size < 100_000
+                if (photo.width < 800 and photo.height < 800)
             ),
-            key=lambda photo: photo.file_size,
+            key=lambda photo: photo.width,
         )
         hfile = await Bot(token=get_token()).get_file(file_record.file_id)
         buffer = BytesIO()
@@ -97,7 +100,7 @@ class Explainer:
             return
         image = await self.get_image(message=message)
         logger.info("Downloaded image: %d", len(image.data))
-        # TODO: support caption
+        assert message.reply_to_message is not None
         caption = (
             "Meme: "
             if not message.reply_to_message.caption

@@ -74,6 +74,14 @@ class ExplainCommand(CommandInterface):
                 text=f"message.chat.type = {message.chat.type} instead of supregroup",
             )
             return False
+        if message.reply_to_message is None:
+            await Bot(token=get_token()).send_message(
+                chat_id=message.chat.id,
+                reply_to_message_id=message.id,
+                text=f"message.reply_to_message is None",
+            )
+            return False
+        assert message.reply_to_message.sender_chat is not None
         if message.reply_to_message.sender_chat.id != get_channel_id():
             await Bot(token=get_token()).send_message(
                 chat_id=message.chat.id,

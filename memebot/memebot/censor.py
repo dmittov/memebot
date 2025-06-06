@@ -30,6 +30,7 @@ class AbstractCensor(abc.ABC):
     def register(self, user_id: int, message_id: int, dt: datetime) -> None: ...
 
     async def post(self, message: Message) -> None:
+        assert message.from_user is not None
         # self, chat_id: int, user_id: int, message: dict
         check_result = self.check(message.from_user.id)
         if check_result.is_allowed:

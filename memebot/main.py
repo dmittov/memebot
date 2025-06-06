@@ -23,8 +23,9 @@ def index():
 @app.post("/webhook")
 async def telegram_webhook():
     try:
+        data: dict = request.get_json(force=True, silent=True) or {}
         update: Update = Update.de_json(
-            data=request.get_json(force=True, silent=True) or {},
+            data=data,
             bot=None,
         )
         logger.debug("update: %s", update)

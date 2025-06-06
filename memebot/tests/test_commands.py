@@ -60,10 +60,6 @@ class TestExplainCommand:
         bot_mock = mocker.MagicMock(spec=Bot)
         _ = mocker.patch("memebot.explainer.firestore", autospec=True)
         _ = mocker.patch(
-            "memebot.explainer.get_token",
-            return_value="NoToken",
-        )
-        _ = mocker.patch(
             "memebot.explainer.Bot",
             return_value=bot_mock,
         )
@@ -85,7 +81,7 @@ class TestExplainCommand:
         )
         message.reply_to_message = Message(
             message_id=2,
-            date=int(datetime.datetime.now(datetime.timezone.utc).timestamp()),
+            date=datetime.datetime.now(datetime.timezone.utc),
             sender_chat=Chat(id=get_channel_id(), type="channel"),
             chat=Chat(
                 type="supergroup",
