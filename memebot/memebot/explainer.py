@@ -10,8 +10,11 @@ from telegram import Bot, Message
 from vertexai.generative_models import GenerationConfig, GenerativeModel, Image, Part
 
 from memebot.config import MODEL_NAME, get_token
+import dspy
 
 logger = logging.getLogger(__name__)
+
+
 
 
 class Explainer:
