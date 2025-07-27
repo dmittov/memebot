@@ -19,6 +19,7 @@ def retrieve_secret(name: str) -> str:
         return get_secret(token)
     return token
 
+
 @cache
 def get_token() -> str:
     return retrieve_secret("TELEGRAM_TOKEN")
