@@ -1,5 +1,5 @@
-from PIL import Image
 import vertexai
+from PIL import Image
 
 from memebot.explainer import Explainer
 

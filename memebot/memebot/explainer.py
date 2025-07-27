@@ -4,17 +4,16 @@ from functools import cache, cached_property
 from io import BytesIO
 from typing import List
 
+import dspy
 import vertexai
 from google.cloud import firestore
 from google.cloud.firestore import FieldFilter
-from telegram import Bot, Message
-# from vertexai.generative_models import GenerationConfig, GenerativeModel, Image, Part
+
 from PIL import Image
 from pydantic import BaseModel, Field
+from telegram import Bot, Message
 
 from memebot.config import MODEL_NAME, get_token
-import dspy
-
 from memebot.retrievers import GermanNewsRetriever
 
 logger = logging.getLogger(__name__)
@@ -23,15 +22,13 @@ logger = logging.getLogger(__name__)
 class SearchQueryModel(BaseModel):
     lang: str = Field(
         description=(
-            "Give the ISO 2-letter code for the majority of the text "
-            "on the picture"
+            "Give the ISO 2-letter code for the majority of the text " "on the picture"
         ),
         example={"value": "en"},
     )
     has_person: bool = Field(
         description=(
-            "Is there a famous person or a drawing of a famous person "
-            "on the picture"
+            "Is there a famous person or a drawing of a famous person " "on the picture"
         ),
         example={"value": True},
     )
@@ -59,9 +56,8 @@ class SearchQueryModel(BaseModel):
 
 class SearchQuerySignature(dspy.Signature):
     """Your task is to analyse a meme."""
-    caption: str = dspy.InputField(
-        desc="Authors caption to the image. May be empty"
-    )
+
+    caption: str = dspy.InputField(desc="Authors caption to the image. May be empty")
     meme_image: dspy.Image = dspy.InputField(desc="The meme image")
     search_query: SearchQueryModel = dspy.OutputField()
 
@@ -69,15 +65,13 @@ class SearchQuerySignature(dspy.Signature):
 class MemeInfoModel(BaseModel):
     lang: str = Field(
         description=(
-            "Give the ISO 2-letter code for the majority of the text "
-            "on the picture"
+            "Give the ISO 2-letter code for the majority of the text " "on the picture"
         ),
         example={"value": "en"},
     )
     has_person: bool = Field(
         description=(
-            "Is there a famous person or a drawing of a famous person "
-            "on the picture"
+            "Is there a famous person or a drawing of a famous person " "on the picture"
         ),
         example={"value": True},
     )
@@ -122,9 +116,8 @@ class MemeInfoModel(BaseModel):
 
 class MemeInfoSignature(dspy.Signature):
     """Your task is to analyse a meme. Your response must be in russian."""
-    caption: str = dspy.InputField(
-        desc="Authors caption to the image. May be empty."
-    )
+
+    caption: str = dspy.InputField(desc="Authors caption to the image. May be empty.")
     meme_image: dspy.Image = dspy.InputField(desc="The meme image")
     context: List[str] = dspy.InputField(
         desc=(
@@ -144,8 +137,8 @@ class Explainer:
         self.n_hour_limit = 24
         lm = dspy.LM(
             "vertex_ai/gemini-2.5-pro",
-            temperature = 0.0,
-            max_tokens = 16384,
+            temperature=0.0,
+            max_tokens=16384,
         )
         dspy.configure(lm=lm)
 
@@ -154,17 +147,16 @@ class Explainer:
         meme_info_extractor = dspy.Predict(MemeInfoSignature)
 
         meme_image = dspy.Image.from_PIL(image)
-        
+
         query = search_query_extractor(
-            caption=caption,
-            meme_image=meme_image
+            caption=caption, meme_image=meme_image
         ).search_query
-        
+
         context = []
         if query.is_query:
             retriver = GermanNewsRetriever()
             context.extend(retriver(query.search_query))
-        
+
         meme_info: MemeInfoModel = meme_info_extractor(
             caption=caption,
             meme_image=meme_image,

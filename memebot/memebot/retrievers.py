@@ -1,8 +1,10 @@
-import httpx
-from typing import AsyncGenerator, List, Optional, Union
-from dspy import Retrieve, Prediction
-from memebot.config import get_german_news_cx_key, get_search_api_key
 import asyncio
+from typing import AsyncGenerator, List, Optional, Union
+
+import httpx
+from dspy import Prediction, Retrieve
+
+from memebot.config import get_german_news_cx_key, get_search_api_key
 
 
 class GermanNewsRetriever(Retrieve):
