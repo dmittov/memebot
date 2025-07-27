@@ -220,7 +220,7 @@ class Explainer:
         buffer = BytesIO()
         await hfile.download_to_memory(out=buffer)
         buffer.seek(0)
-        return Image.frombytes(buffer.read())
+        return Image.open(buffer)
 
     async def explain(self, message: Message) -> None:
         logger.info("Running explain")
