@@ -1,5 +1,5 @@
 import httpx
-from typing import AsyncGenerator, Iterable, List, Optional, Union
+from typing import AsyncGenerator, List, Optional, Union
 from dspy import Retrieve, Prediction
 from memebot.config import get_german_news_cx_key, get_search_api_key
 import asyncio
@@ -48,4 +48,3 @@ class GermanNewsRetriever(Retrieve):
             )
         )
         return documents
-        
