@@ -8,7 +8,6 @@ import dspy
 import vertexai
 from google.cloud import firestore
 from google.cloud.firestore import FieldFilter
-
 from PIL import Image
 from pydantic import BaseModel, Field
 from telegram import Bot, Message

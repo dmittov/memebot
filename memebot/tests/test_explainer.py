@@ -1,8 +1,9 @@
 from io import BytesIO
-from telegram import Bot
-import vertexai
+
 import pytest
+import vertexai
 from PIL import Image
+from telegram import Bot
 
 from memebot.config import get_token
 from memebot.explainer import Explainer
