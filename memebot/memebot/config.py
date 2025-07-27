@@ -12,11 +12,27 @@ def get_secret(resource_name: str) -> str:
     return payload_bytes.decode("utf-8")
 
 
+def retrieve_secret(name: str) -> str:
+    if not (token := os.getenv(name)):
+        return "NoToken"
+    if token.startswith("projects/"):
+        return get_secret(token)
+    return token
+
+
 @cache
 def get_token() -> str:
-    if not (token_path := os.getenv("TELEGRAM_TOKEN")):
-        return "NoToken"
-    return get_secret(token_path)
+    return retrieve_secret("TELEGRAM_TOKEN")
+
+
+@cache
+def get_german_news_cx_key() -> str:
+    return retrieve_secret("GERMAN_NEWS_CX_KEY")
+
+
+@cache
+def get_search_api_key() -> str:
+    return retrieve_secret("SEARCH_API_KEY")
 
 
 @cache

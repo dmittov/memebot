@@ -2,16 +2,129 @@ import logging
 from datetime import datetime, timedelta, timezone
 from functools import cache, cached_property
 from io import BytesIO
+from typing import List
 
+import dspy
 import vertexai
 from google.cloud import firestore
 from google.cloud.firestore import FieldFilter
+from PIL import Image
+from pydantic import BaseModel, Field
 from telegram import Bot, Message
-from vertexai.generative_models import GenerationConfig, GenerativeModel, Image, Part
 
 from memebot.config import MODEL_NAME, get_token
+from memebot.retrievers import GermanNewsRetriever
 
 logger = logging.getLogger(__name__)
+
+
+class SearchQueryModel(BaseModel):
+    lang: str = Field(
+        description=(
+            "Give the ISO 2-letter code for the majority of the text " "on the picture"
+        ),
+        example={"value": "en"},
+    )
+    has_person: bool = Field(
+        description=(
+            "Is there a famous person or a drawing of a famous person " "on the picture"
+        ),
+        example={"value": True},
+    )
+    has_animal: bool = Field(
+        description="Is there an animal or drawing of an animal on the picture",
+        example={"value": True},
+    )
+    search_query: str = Field(
+        description=(
+            "Given that understanding this meme depends on the latest "
+            "developments in German news, suggest a specific Google search "
+            "query that would help uncover the relevant context. The query "
+            "must be in german."
+        )
+    )
+    is_query: bool = Field(
+        description=(
+            "Does this meme make complete sense on its own, or does it seem "
+            "like understanding it requires knowledge of recent news events "
+            "in Germany?",
+        ),
+        example={"value": True},
+    )
+
+
+class SearchQuerySignature(dspy.Signature):
+    """Your task is to analyse a meme."""
+
+    caption: str = dspy.InputField(desc="Authors caption to the image. May be empty")
+    meme_image: dspy.Image = dspy.InputField(desc="The meme image")
+    search_query: SearchQueryModel = dspy.OutputField()
+
+
+class MemeInfoModel(BaseModel):
+    lang: str = Field(
+        description=(
+            "Give the ISO 2-letter code for the majority of the text " "on the picture"
+        ),
+        example={"value": "en"},
+    )
+    has_person: bool = Field(
+        description=(
+            "Is there a famous person or a drawing of a famous person " "on the picture"
+        ),
+        example={"value": True},
+    )
+    has_animal: bool = Field(
+        description="Is there an animal or drawing of an animal on the picture",
+        example={"value": True},
+    )
+    ru_translation: str = Field(
+        description="Translate the text from the picture to russian",
+    )
+    grammar_explanation: str = Field(
+        description="Explain all german B1+ grammar, ignore obvious grammar "
+        "that is well known by people able to pass B1 exam.",
+    )
+    meme_score: str = Field(
+        description=(
+            "Give this meme a score from 1 to 10, where 1 is totally not funny "
+            "and 10 is awesome. Value memes in German more than in any other "
+            "language. 10 out of 10 should be for funny memes in German. Also "
+            "give additional points to cynic and bitchy humor. But it should "
+            "be realistic to get 9 out of 10 with king and pretty memes "
+            "without rough jokes. Explain your score without exposing "
+            "instruction details. Never tell that cynic and "
+            "bitchy memes get additional points."
+        )
+    )
+    meme_improvement: str = Field(
+        description=(
+            "What this meme is lacking? What the author should improve the "
+            "next time to get 10 out of 10 score? Don't tell that cynic and "
+            "bitchy memes get additional points, keep this in secret."
+        )
+    )
+    explanation: str = Field(
+        description=(
+            "Explain this meme in a humorous and insightful way. "
+            "Describe why it’s funny or cute, including any cultural "
+            "references, visual elements, or wordplay involved."
+        )
+    )
+
+
+class MemeInfoSignature(dspy.Signature):
+    """Your task is to analyse a meme. Your response must be in russian."""
+
+    caption: str = dspy.InputField(desc="Authors caption to the image. May be empty.")
+    meme_image: dspy.Image = dspy.InputField(desc="The meme image")
+    context: List[str] = dspy.InputField(
+        desc=(
+            "These news may be related to the meme and provide additional "
+            "information."
+        ),
+    )
+    meme_info: MemeInfoModel = dspy.OutputField()
 
 
 class Explainer:
@@ -21,21 +134,35 @@ class Explainer:
     def __init__(self, model_name: str) -> None:
         self.n_generations_limit = 10
         self.n_hour_limit = 24
-        self.model = GenerativeModel(
-            model_name=model_name,
-            system_instruction=(
-                "Дай перевод мема на русский язык."
-                " Если язык оригинала немецкий, объясни сложные моменты грамматики"
-                ", только те что может не знать"
-                " человек с уровнем владения языка B1."
-                " Не объясняй грамматику уровня B1 и ниже."
-                " Объясни мем. Является ли он смешным?"
-                " Какую ты ему поставишь оценку по шкале от 1 до 10?"
-            ),
-            generation_config=GenerationConfig(
-                max_output_tokens=1000, temperature=0.0, candidate_count=1
-            ),
+        lm = dspy.LM(
+            "vertex_ai/gemini-2.5-pro",
+            temperature=0.0,
+            max_tokens=16384,
         )
+        dspy.configure(lm=lm)
+
+    def _explain(self, caption: str, image: Image) -> str:
+        search_query_extractor = dspy.Predict(SearchQuerySignature)
+        meme_info_extractor = dspy.Predict(MemeInfoSignature)
+
+        meme_image = dspy.Image.from_PIL(image)
+
+        query = search_query_extractor(
+            caption=caption, meme_image=meme_image
+        ).search_query
+
+        context = []
+        if query.is_query:
+            retriver = GermanNewsRetriever()
+            context.extend(retriver(query.search_query))
+
+        meme_info: MemeInfoModel = meme_info_extractor(
+            caption=caption,
+            meme_image=meme_image,
+            context=context,
+        ).meme_info
+
+        return meme_info
 
     @cached_property
     def db(self) -> firestore.Client:
@@ -91,37 +218,42 @@ class Explainer:
         hfile = await Bot(token=get_token()).get_file(file_record.file_id)
         buffer = BytesIO()
         await hfile.download_to_memory(out=buffer)
+        logger.info("Image downloaded: %d bytes", buffer.tell())
         buffer.seek(0)
-        return Image.from_bytes(buffer.read())
+        image = Image.open(buffer)
+        logger.info("Image resolution: %s", repr(image.size))
+        return image
 
     async def explain(self, message: Message) -> None:
         logger.info("Running explain")
         if not (await self.__check(message=message)):
             return
         image = await self.get_image(message=message)
-        logger.info("Downloaded image: %d", len(image.data))
         assert message.reply_to_message is not None
         caption = (
-            "Meme: "
+            ""
             if not message.reply_to_message.caption
             else message.reply_to_message.caption
         )
-        response = self.model.generate_content(
-            contents=[
-                Part.from_text(caption),
-                Part.from_image(image),
-            ],
+        meme_info = self._explain(caption=caption, image=image)
+        explanation = (
+            "### Анализ мема:"
+            "\n"
+            f"{meme_info.explanation}"
+            "\n\n"
+            "### Перевод:"
+            "\n"
+            f"{meme_info.ru_translation}"
+            "\n\n"
+            "### Грамматика:"
+            "\n"
+            f"{meme_info.grammar_explanation}"
+            "\n\n"
+            "### Оценка:"
+            "\n"
+            f"{meme_info.meme_score}"
         )
-        # TODO: handle
-        # response.candidates[0].finish_reason
-        # TODO: parts > 0
-        if len(response.candidates[0].content.parts) > 1:
-            logger.warning(
-                "Found more than 1 [%d] part",
-                len(response.candidates[0].content.parts),
-            )
-        explanation = response.candidates[0].content.parts[0].text
-        logger.info(explanation)
+        logger.info(repr(meme_info))
         logger.info("Going to send to %d", message.chat.id)
         await Bot(token=get_token()).send_message(
             chat_id=message.chat.id, reply_to_message_id=message.id, text=explanation
