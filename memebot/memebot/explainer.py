@@ -219,15 +219,17 @@ class Explainer:
         hfile = await Bot(token=get_token()).get_file(file_record.file_id)
         buffer = BytesIO()
         await hfile.download_to_memory(out=buffer)
+        logger.info("Image downloaded: %d bytes", buffer.tell())
         buffer.seek(0)
-        return Image.open(buffer)
+        image = Image.open(buffer)
+        logger.info("Image resolution: %s", repr(image.size))
+        return image
 
     async def explain(self, message: Message) -> None:
         logger.info("Running explain")
         if not (await self.__check(message=message)):
             return
         image = await self.get_image(message=message)
-        logger.info("Downloaded image: %d", len(image.data))
         assert message.reply_to_message is not None
         caption = (
             ""
