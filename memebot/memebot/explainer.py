@@ -135,8 +135,8 @@ class Explainer:
 
         meme_image = dspy.Image.from_PIL(image)
 
-        query = await search_query_extractor.acall(
-            caption=caption, meme_image=meme_image
+        query = (
+            await search_query_extractor.acall(caption=caption, meme_image=meme_image)
         ).search_query
 
         context = []
@@ -144,10 +144,12 @@ class Explainer:
             retriver = GermanNewsRetriever()
             context.extend(await retriver.search(query.search_query))
 
-        meme_info: MemeInfoModel = await meme_info_extractor.acall(
-            caption=caption,
-            meme_image=meme_image,
-            context=context,
+        meme_info: MemeInfoModel = (
+            await meme_info_extractor.acall(
+                caption=caption,
+                meme_image=meme_image,
+                context=context,
+            )
         ).meme_info
 
         return meme_info
