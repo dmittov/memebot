@@ -1,41 +1,47 @@
-from typing import Generator, List, Optional, Union
-
+import asyncio
+from collections.abc import Awaitable
+from datetime import timedelta
 import httpx
-from dspy import Prediction, Retrieve
-
 from memebot.config import get_german_news_cx_key, get_search_api_key
 
 
-class GermanNewsRetriever(Retrieve):
+class GermanNewsRetriever:
 
-    def __init__(self, k: int = 3) -> None:
+    def __init__(self, **kwargs: dict[str, any]) -> None:
         self.__search_api_key = get_search_api_key()
         self.__get_german_news_cx_key = get_german_news_cx_key()
         self.__base_url = "https://www.googleapis.com/customsearch/v1"
-        super().__init__(k=k)
+        self.k: int = kwargs.get("k", 3)
+        timeout: timedelta = kwargs.get("timeout", timedelta(seconds=30))
+        self.timeout = timeout.total_seconds()
 
-    def _search(self, query, k: int) -> Generator[str, None, None]:
+    async def _search(self, client: httpx.AsyncClient, query: str, k: int) -> list[Awaitable[httpx.Response]]:
         params = dict(
             q=query,
             cx=self.__get_german_news_cx_key,
             key=self.__search_api_key,
         )
-        with httpx.Client(follow_redirects=True) as client:
-            response = client.get(url=self.__base_url, params=params)
-            if response.status_code != 200:
-                return
-            results = response.json()
-            for result in results["items"][:k]:
-                link = result["link"]
-                page_response = client.get(link)
-                yield page_response.text
+        try:
+            response = await client.get(url=self.__base_url, params=params)
+        except httpx.TimeoutException:
+            return []
+        if response.status_code != 200:
+            return []
+        results = response.json()
+        coroutines = []
+        for result in results["items"][:k]:
+            link = result["link"]
+            coroutines.append(client.get(link))
+        return coroutines
 
-    def forward(
-        self,
-        query: str,
-        k: Optional[int] = None,
-        **kwargs,
-    ) -> Union[List[str], Prediction, List[Prediction]]:
-        _ = kwargs
-        documents = list(self._search(query=query, k=k if k else self.k))
+    async def search(self, query: str, k: int | None = None) -> list[str]:
+        documents = []
+        async with httpx.AsyncClient(follow_redirects=True, timeout=self.timeout) as client:
+            coroutines = await self._search(client=client, query=query, k=k if k else self.k)
+            for coroutine in asyncio.as_completed(coroutines):
+                try:
+                    document = (await coroutine).text 
+                    documents.append(document)
+                except httpx.TimeoutException:
+                    ...
         return documents
