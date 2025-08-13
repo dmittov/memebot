@@ -21,19 +21,17 @@ logger = logging.getLogger(__name__)
 class SearchQueryModel(BaseModel):
     lang: str = Field(
         description=(
-            "Give the ISO 2-letter code for the majority of the text " "on the picture"
-        ),
-        example={"value": "en"},
+            "Give the ISO 2-letter code for the majority of the text "
+            "on the picture"
+        )
     )
     has_person: bool = Field(
         description=(
             "Is there a famous person or a drawing of a famous person " "on the picture"
-        ),
-        example={"value": True},
+        )
     )
     has_animal: bool = Field(
-        description="Is there an animal or drawing of an animal on the picture",
-        example={"value": True},
+        description="Is there an animal or drawing of an animal on the picture"
     )
     search_query: str = Field(
         description=(
@@ -48,8 +46,7 @@ class SearchQueryModel(BaseModel):
             "Does this meme make complete sense on its own, or does it seem "
             "like understanding it requires knowledge of recent news events "
             "in Germany?",
-        ),
-        example={"value": True},
+        )
     )
 
 
@@ -65,21 +62,18 @@ class MemeInfoModel(BaseModel):
     lang: str = Field(
         description=(
             "Give the ISO 2-letter code for the majority of the text " "on the picture"
-        ),
-        example={"value": "en"},
+        )
     )
     has_person: bool = Field(
         description=(
             "Is there a famous person or a drawing of a famous person " "on the picture"
-        ),
-        example={"value": True},
+        )
     )
     has_animal: bool = Field(
         description="Is there an animal or drawing of an animal on the picture",
-        example={"value": True},
     )
     ru_translation: str = Field(
-        description="Translate the text from the picture to russian",
+        description="Translate the text from the picture to russian"
     )
     grammar_explanation: str = Field(
         description="Explain all german B1+ grammar, ignore obvious grammar "
@@ -131,14 +125,9 @@ class Explainer:
     # TODO: fix race condition
     # TODO: check allows another request in 24hrs
 
-    def __init__(self, model_name: str) -> None:
+    def __init__(self, lm: dspy.LM) -> None:
         self.n_generations_limit = 10
         self.n_hour_limit = 24
-        lm = dspy.LM(
-            "vertex_ai/gemini-2.5-pro",
-            temperature=0.0,
-            max_tokens=16384,
-        )
         dspy.configure(lm=lm)
 
     def _explain(self, caption: str, image: Image) -> str:
@@ -264,4 +253,9 @@ class Explainer:
 @cache
 def get_explainer() -> Explainer:
     vertexai.init()
-    return Explainer(model_name=MODEL_NAME)
+    lm = dspy.LM(
+        MODEL_NAME,
+        temperature=0.0,
+        max_tokens=16384,
+    )
+    return Explainer(lm=lm)
