@@ -1,5 +1,4 @@
-import asyncio
-from typing import AsyncGenerator, Generator, List, Optional, Union
+from typing import Generator, List, Optional, Union
 
 import httpx
 from dspy import Prediction, Retrieve
@@ -31,23 +30,12 @@ class GermanNewsRetriever(Retrieve):
                 page_response = client.get(link)
                 yield page_response.text
 
-    # async def _collect_search_results(self, query, k: int) -> List[str]:
-    #     documents = []
-    #     async for doc in self._search(query=query, k=k):
-    #         documents.append(doc)
-    #     return documents
-
     def forward(
         self,
         query: str,
         k: Optional[int] = None,
         **kwargs,
     ) -> Union[List[str], Prediction, List[Prediction]]:
+        _ = kwargs
         documents = list(self._search(query=query, k=k if k else self.k))
-        # asyncio.run(
-        #     self._collect_search_results(
-        #         query=query,
-        #         k=k if k is not None else self.k,
-        #     )
-        # )
         return documents
