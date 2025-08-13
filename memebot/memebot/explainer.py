@@ -2,16 +2,21 @@ import logging
 from datetime import datetime, timedelta, timezone
 from functools import cache, cached_property
 from io import BytesIO
+from typing import List
 
+import dspy
 import dspy
 import vertexai
 from google.cloud import firestore
 from google.cloud.firestore import FieldFilter
 from PIL import Image
 from pydantic import BaseModel, Field
+from PIL import Image
+from pydantic import BaseModel, Field
 from telegram import Bot, Message
 
 from memebot.config import MODEL_NAME, get_token
+from memebot.retrievers import GermanNewsRetriever
 from memebot.retrievers import GermanNewsRetriever
 
 logger = logging.getLogger(__name__)
@@ -209,7 +214,11 @@ class Explainer:
         buffer = BytesIO()
         await hfile.download_to_memory(out=buffer)
         logger.info("Image downloaded: %d bytes", buffer.tell())
+        logger.info("Image downloaded: %d bytes", buffer.tell())
         buffer.seek(0)
+        image = Image.open(buffer)
+        logger.info("Image resolution: %s", repr(image.size))
+        return image
         image = Image.open(buffer)
         logger.info("Image resolution: %s", repr(image.size))
         return image
@@ -221,6 +230,7 @@ class Explainer:
         image = await self.get_image(message=message)
         assert message.reply_to_message is not None
         caption = (
+            ""
             ""
             if not message.reply_to_message.caption
             else message.reply_to_message.caption
