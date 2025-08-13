@@ -2,7 +2,6 @@ import logging
 from datetime import datetime, timedelta, timezone
 from functools import cache, cached_property
 from io import BytesIO
-from typing import List
 
 import dspy
 import vertexai
@@ -112,7 +111,7 @@ class MemeInfoSignature(dspy.Signature):
 
     caption: str = dspy.InputField(desc="Authors caption to the image. May be empty.")
     meme_image: dspy.Image = dspy.InputField(desc="The meme image")
-    context: List[str] = dspy.InputField(
+    context: list[str] = dspy.InputField(
         desc=(
             "These news may be related to the meme and provide additional "
             "information."
@@ -130,7 +129,7 @@ class Explainer:
         self.n_hour_limit = 24
         dspy.configure(lm=lm)
 
-    def _explain(self, caption: str, image: Image) -> str:
+    async def _explain(self, caption: str, image: Image) -> str:
         search_query_extractor = dspy.Predict(SearchQuerySignature)
         meme_info_extractor = dspy.Predict(MemeInfoSignature)
 
@@ -142,8 +141,8 @@ class Explainer:
 
         context = []
         if query.is_query:
-            retriver = GermanNewsRetriever()
-            context.extend(retriver(query.search_query))
+            retriver = dspy.asyncify(GermanNewsRetriever())
+            context.extend(await retriver.acall(query.search_query))
 
         meme_info: MemeInfoModel = meme_info_extractor(
             caption=caption,
@@ -224,7 +223,7 @@ class Explainer:
             if not message.reply_to_message.caption
             else message.reply_to_message.caption
         )
-        meme_info = self._explain(caption=caption, image=image)
+        meme_info = await self._explain(caption=caption, image=image)
         explanation = (
             "### Анализ мема:"
             "\n"
