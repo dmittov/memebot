@@ -22,17 +22,16 @@ class SearchQueryModel(BaseModel):
         ...,
         description=(
             "Give the ISO 2-letter code for the majority of the text " "on the picture"
-        )
+        ),
     )
     has_person: bool = Field(
         ...,
         description=(
             "Is there a famous person or a drawing of a famous person " "on the picture"
-        )
+        ),
     )
     has_animal: bool = Field(
-        ...,
-        description="Is there an animal or drawing of an animal on the picture"
+        ..., description="Is there an animal or drawing of an animal on the picture"
     )
     search_query: str = Field(
         ...,
@@ -41,7 +40,7 @@ class SearchQueryModel(BaseModel):
             "developments in German news, suggest a specific Google search "
             "query that would help uncover the relevant context. The query "
             "must be in german."
-        )
+        ),
     )
     is_query: bool = Field(
         ...,
@@ -49,7 +48,7 @@ class SearchQueryModel(BaseModel):
             "Does this meme make complete sense on its own, or does it seem "
             "like understanding it requires knowledge of recent news events "
             "in Germany?"
-        )
+        ),
     )
 
 
@@ -133,7 +132,7 @@ class Explainer:
         self.n_hour_limit = 24
         dspy.configure(lm=lm)
 
-    async def _explain(self, caption: str, image: Image) -> str:
+    async def _explain(self, caption: str, image: Image.Image) -> MemeInfoModel:
         search_query_extractor = dspy.Predict(SearchQuerySignature)
         meme_info_extractor = dspy.Predict(MemeInfoSignature)
 
@@ -199,7 +198,7 @@ class Explainer:
             }
         )
 
-    async def get_image(self, message: Message) -> Image:
+    async def get_image(self, message: Message) -> Image.Image:
         assert message.reply_to_message is not None
         file_record = max(
             (
