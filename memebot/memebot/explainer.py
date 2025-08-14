@@ -5,18 +5,14 @@ from io import BytesIO
 from typing import List
 
 import dspy
-import dspy
 import vertexai
 from google.cloud import firestore
 from google.cloud.firestore import FieldFilter
 from PIL import Image
 from pydantic import BaseModel, Field
-from PIL import Image
-from pydantic import BaseModel, Field
 from telegram import Bot, Message
 
 from memebot.config import MODEL_NAME, get_token
-from memebot.retrievers import GermanNewsRetriever
 from memebot.retrievers import GermanNewsRetriever
 
 logger = logging.getLogger(__name__)

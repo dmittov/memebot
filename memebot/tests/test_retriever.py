@@ -1,8 +1,10 @@
 import asyncio
 from collections import deque
+
 import httpx
 import pytest
 from pytest_mock import MockerFixture
+
 from memebot.retrievers import GermanNewsRetriever
 
 

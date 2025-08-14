@@ -1,7 +1,9 @@
 import asyncio
 from collections.abc import Awaitable
 from datetime import timedelta
+
 import httpx
+
 from memebot.config import get_german_news_cx_key, get_search_api_key
 
 
