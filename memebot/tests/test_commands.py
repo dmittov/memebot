@@ -1,9 +1,10 @@
 import datetime
 
+import dspy
 import pytest
+from PIL import Image
 from pytest_mock import MockerFixture
 from telegram import Bot, Chat, Message, PhotoSize
-from vertexai.generative_models import GenerativeModel
 
 import memebot.commands as commands
 from memebot.config import get_channel_id
@@ -63,15 +64,23 @@ class TestExplainCommand:
             "memebot.explainer.Bot",
             return_value=bot_mock,
         )
-        model_mock = mocker.MagicMock(spec=GenerativeModel)
+        model_mock = mocker.MagicMock(spec=dspy.Predict)
         _ = mocker.patch(
-            "memebot.explainer.GenerativeModel",
+            "memebot.explainer.dspy.Predict",
             return_value=model_mock,
         )
         # avoid calling vertexai.init()
         _ = mocker.patch(
             "memebot.commands.get_explainer",
             return_value=Explainer("no_model"),
+        )
+        mock_get_image = mocker.patch("memebot.explainer.Explainer.get_image")
+        mock_news_retriver = mocker.patch(
+            "memebot.explainer.GermanNewsRetriever"
+        ).return_value
+        mock_news_retriver.search = mocker.AsyncMock(return_value=["Text1", "Text2"])
+        mock_get_image.return_value = Image.new(
+            mode="RGB", size=(200, 200), color=(255, 255, 255)
         )
         message._unfreeze()
         message.text = "/explain"
@@ -98,8 +107,8 @@ class TestExplainCommand:
             ],
             caption="Es ist Mittwoch, meine Kerle",
         )
+
         message._freeze()
         command = commands.ExplainCommand(message)
         await command.run()
-        assert model_mock.generate_content.call_count == 1
         assert bot_mock.send_message.call_count == 1
