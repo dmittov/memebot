@@ -1,6 +1,7 @@
 import asyncio
 from collections.abc import Awaitable
 from datetime import timedelta
+from typing import Any
 
 import httpx
 
@@ -9,7 +10,7 @@ from memebot.config import get_german_news_cx_key, get_search_api_key
 
 class GermanNewsRetriever:
 
-    def __init__(self, **kwargs: dict[str, any]) -> None:
+    def __init__(self, **kwargs: dict[str, Any]) -> None:
         self.__search_api_key = get_search_api_key()
         self.__get_german_news_cx_key = get_german_news_cx_key()
         self.__base_url = "https://www.googleapis.com/customsearch/v1"
