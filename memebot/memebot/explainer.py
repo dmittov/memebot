@@ -25,8 +25,7 @@ logger = logging.getLogger(__name__)
 class SearchQueryModel(BaseModel):
     lang: str = Field(
         description=(
-            "Give the ISO 2-letter code for the majority of the text "
-            "on the picture"
+            "Give the ISO 2-letter code for the majority of the text " "on the picture"
         )
     )
     has_person: bool = Field(
@@ -230,8 +229,7 @@ class Explainer:
         image = await self.get_image(message=message)
         assert message.reply_to_message is not None
         caption = (
-            ""
-            ""
+            "" ""
             if not message.reply_to_message.caption
             else message.reply_to_message.caption
         )

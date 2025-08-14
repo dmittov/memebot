@@ -15,7 +15,9 @@ class GermanNewsRetriever:
         timeout: timedelta = kwargs.get("timeout", timedelta(seconds=30))
         self.timeout = timeout.total_seconds()
 
-    async def _search(self, client: httpx.AsyncClient, query: str, k: int) -> list[Awaitable[httpx.Response]]:
+    async def _search(
+        self, client: httpx.AsyncClient, query: str, k: int
+    ) -> list[Awaitable[httpx.Response]]:
         params = dict(
             q=query,
             cx=self.__get_german_news_cx_key,
@@ -36,11 +38,15 @@ class GermanNewsRetriever:
 
     async def search(self, query: str, k: int | None = None) -> list[str]:
         documents = []
-        async with httpx.AsyncClient(follow_redirects=True, timeout=self.timeout) as client:
-            coroutines = await self._search(client=client, query=query, k=k if k else self.k)
+        async with httpx.AsyncClient(
+            follow_redirects=True, timeout=self.timeout
+        ) as client:
+            coroutines = await self._search(
+                client=client, query=query, k=k if k else self.k
+            )
             for coroutine in asyncio.as_completed(coroutines):
                 try:
-                    document = (await coroutine).text 
+                    document = (await coroutine).text
                     documents.append(document)
                 except httpx.TimeoutException:
                     ...
