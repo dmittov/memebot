@@ -12,6 +12,7 @@ from memebot.retrievers import GermanNewsRetriever
 @pytest.mark.asyncio
 class TestGermanNewsRetriever:
 
+    # No Google Search API key in testing env
     @pytest.mark.skip
     async def test_get_real_news(self) -> None:
         k: int = 3

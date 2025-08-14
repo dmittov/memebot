@@ -13,6 +13,8 @@ from memebot.explainer import Explainer
 @pytest.mark.asyncio
 class TestExplainer:
 
+    # No real Telegram token in testing env
+    @pytest.mark.skip
     async def test_image(self) -> None:
         hfile = await Bot(token=get_token()).get_file(
             file_id="AgACAgIAAxkBAAIBxmiGUBFD9oDC71HNnHv7ZeGZr_mpAAIB9DEbDF84SHKx38IRXUlvAQADAgADbQADNgQ"
@@ -23,6 +25,7 @@ class TestExplainer:
         img = Image.open(buffer)
         assert img is not None
 
+    # No GCP auth in testing env
     @pytest.mark.skip
     async def test_search(self) -> None:
         image = Image.open("tests/img/grune.jpg")
