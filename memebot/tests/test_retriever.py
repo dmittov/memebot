@@ -1,5 +1,6 @@
 import asyncio
 from collections import deque
+from typing import Any
 
 import httpx
 import pytest
@@ -87,7 +88,7 @@ class TestGermanNewsRetriever:
             ]
         )
 
-        async def _get(*args: list[any], **kwargs: dict[str, any]):
+        async def _get(*args: Any, **kwargs: Any):
             _ = args
             _ = kwargs
             result = responses.popleft()
@@ -135,7 +136,7 @@ class TestGermanNewsRetriever:
             ]
         )
 
-        async def _get(*args: list[any], **kwargs: dict[str, any]):
+        async def _get(*args: Any, **kwargs: Any):
             _ = args
             _ = kwargs
             result = responses.popleft()
