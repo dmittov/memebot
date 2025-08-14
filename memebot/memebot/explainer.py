@@ -2,7 +2,6 @@ import logging
 from datetime import datetime, timedelta, timezone
 from functools import cache, cached_property
 from io import BytesIO
-from typing import List
 
 import dspy
 import vertexai
@@ -20,19 +19,23 @@ logger = logging.getLogger(__name__)
 
 class SearchQueryModel(BaseModel):
     lang: str = Field(
+        ...,
         description=(
             "Give the ISO 2-letter code for the majority of the text " "on the picture"
         )
     )
     has_person: bool = Field(
+        ...,
         description=(
             "Is there a famous person or a drawing of a famous person " "on the picture"
         )
     )
     has_animal: bool = Field(
+        ...,
         description="Is there an animal or drawing of an animal on the picture"
     )
     search_query: str = Field(
+        ...,
         description=(
             "Given that understanding this meme depends on the latest "
             "developments in German news, suggest a specific Google search "
@@ -41,10 +44,11 @@ class SearchQueryModel(BaseModel):
         )
     )
     is_query: bool = Field(
+        ...,
         description=(
             "Does this meme make complete sense on its own, or does it seem "
             "like understanding it requires knowledge of recent news events "
-            "in Germany?",
+            "in Germany?"
         )
     )
 
