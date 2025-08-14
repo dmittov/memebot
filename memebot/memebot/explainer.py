@@ -2,7 +2,6 @@ import logging
 from datetime import datetime, timedelta, timezone
 from functools import cache, cached_property
 from io import BytesIO
-from typing import List
 
 import dspy
 import vertexai
@@ -20,36 +19,36 @@ logger = logging.getLogger(__name__)
 
 class SearchQueryModel(BaseModel):
     lang: str = Field(
+        ...,
         description=(
             "Give the ISO 2-letter code for the majority of the text " "on the picture"
         ),
-        example={"value": "en"},
     )
     has_person: bool = Field(
+        ...,
         description=(
             "Is there a famous person or a drawing of a famous person " "on the picture"
         ),
-        example={"value": True},
     )
     has_animal: bool = Field(
-        description="Is there an animal or drawing of an animal on the picture",
-        example={"value": True},
+        ..., description="Is there an animal or drawing of an animal on the picture"
     )
     search_query: str = Field(
+        ...,
         description=(
             "Given that understanding this meme depends on the latest "
             "developments in German news, suggest a specific Google search "
             "query that would help uncover the relevant context. The query "
             "must be in german."
-        )
+        ),
     )
     is_query: bool = Field(
+        ...,
         description=(
             "Does this meme make complete sense on its own, or does it seem "
             "like understanding it requires knowledge of recent news events "
-            "in Germany?",
+            "in Germany?"
         ),
-        example={"value": True},
     )
 
 
@@ -65,21 +64,18 @@ class MemeInfoModel(BaseModel):
     lang: str = Field(
         description=(
             "Give the ISO 2-letter code for the majority of the text " "on the picture"
-        ),
-        example={"value": "en"},
+        )
     )
     has_person: bool = Field(
         description=(
             "Is there a famous person or a drawing of a famous person " "on the picture"
-        ),
-        example={"value": True},
+        )
     )
     has_animal: bool = Field(
         description="Is there an animal or drawing of an animal on the picture",
-        example={"value": True},
     )
     ru_translation: str = Field(
-        description="Translate the text from the picture to russian",
+        description="Translate the text from the picture to russian"
     )
     grammar_explanation: str = Field(
         description="Explain all german B1+ grammar, ignore obvious grammar "
@@ -118,7 +114,7 @@ class MemeInfoSignature(dspy.Signature):
 
     caption: str = dspy.InputField(desc="Authors caption to the image. May be empty.")
     meme_image: dspy.Image = dspy.InputField(desc="The meme image")
-    context: List[str] = dspy.InputField(
+    context: list[str] = dspy.InputField(
         desc=(
             "These news may be related to the meme and provide additional "
             "information."
@@ -131,35 +127,32 @@ class Explainer:
     # TODO: fix race condition
     # TODO: check allows another request in 24hrs
 
-    def __init__(self, model_name: str) -> None:
+    def __init__(self, lm: dspy.LM) -> None:
         self.n_generations_limit = 10
         self.n_hour_limit = 24
-        lm = dspy.LM(
-            "vertex_ai/gemini-2.5-pro",
-            temperature=0.0,
-            max_tokens=16384,
-        )
         dspy.configure(lm=lm)
 
-    def _explain(self, caption: str, image: Image) -> str:
+    async def _explain(self, caption: str, image: Image.Image) -> MemeInfoModel:
         search_query_extractor = dspy.Predict(SearchQuerySignature)
         meme_info_extractor = dspy.Predict(MemeInfoSignature)
 
         meme_image = dspy.Image.from_PIL(image)
 
-        query = search_query_extractor(
-            caption=caption, meme_image=meme_image
+        query = (
+            await search_query_extractor.acall(caption=caption, meme_image=meme_image)
         ).search_query
 
         context = []
         if query.is_query:
             retriver = GermanNewsRetriever()
-            context.extend(retriver(query.search_query))
+            context.extend(await retriver.search(query.search_query))
 
-        meme_info: MemeInfoModel = meme_info_extractor(
-            caption=caption,
-            meme_image=meme_image,
-            context=context,
+        meme_info: MemeInfoModel = (
+            await meme_info_extractor.acall(
+                caption=caption,
+                meme_image=meme_image,
+                context=context,
+            )
         ).meme_info
 
         return meme_info
@@ -205,7 +198,7 @@ class Explainer:
             }
         )
 
-    async def get_image(self, message: Message) -> Image:
+    async def get_image(self, message: Message) -> Image.Image:
         assert message.reply_to_message is not None
         file_record = max(
             (
@@ -219,7 +212,11 @@ class Explainer:
         buffer = BytesIO()
         await hfile.download_to_memory(out=buffer)
         logger.info("Image downloaded: %d bytes", buffer.tell())
+        logger.info("Image downloaded: %d bytes", buffer.tell())
         buffer.seek(0)
+        image = Image.open(buffer)
+        logger.info("Image resolution: %s", repr(image.size))
+        return image
         image = Image.open(buffer)
         logger.info("Image resolution: %s", repr(image.size))
         return image
@@ -231,11 +228,11 @@ class Explainer:
         image = await self.get_image(message=message)
         assert message.reply_to_message is not None
         caption = (
-            ""
+            "" ""
             if not message.reply_to_message.caption
             else message.reply_to_message.caption
         )
-        meme_info = self._explain(caption=caption, image=image)
+        meme_info = await self._explain(caption=caption, image=image)
         explanation = (
             "### Анализ мема:"
             "\n"
@@ -264,4 +261,9 @@ class Explainer:
 @cache
 def get_explainer() -> Explainer:
     vertexai.init()
-    return Explainer(model_name=MODEL_NAME)
+    lm = dspy.LM(
+        MODEL_NAME,
+        temperature=0.0,
+        max_tokens=16384,
+    )
+    return Explainer(lm=lm)
