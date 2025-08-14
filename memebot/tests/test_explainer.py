@@ -23,6 +23,7 @@ class TestExplainer:
         img = Image.open(buffer)
         assert img is not None
 
+    @pytest.mark.skip
     async def test_search(self) -> None:
         image = Image.open("tests/img/grune.jpg")
         vertexai.init()

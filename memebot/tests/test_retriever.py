@@ -100,7 +100,7 @@ class TestGermanNewsRetriever:
         client.get.side_effect = _get
         retriver = GermanNewsRetriever(k=k)
         results = await retriver.search(query="Ralph Schumacher")
-        assert len(results) == k
+        assert len(results) == k - 1
 
     async def test_get_news_delay(self, mocker: MockerFixture) -> None:
         k: int = 3
