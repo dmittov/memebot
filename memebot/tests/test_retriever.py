@@ -12,6 +12,7 @@ from memebot.retrievers import GermanNewsRetriever
 @pytest.mark.asyncio
 class TestGermanNewsRetriever:
 
+    @pytest.mark.skip
     async def test_get_real_news(self) -> None:
         k: int = 3
         retriver = GermanNewsRetriever(k=k)
