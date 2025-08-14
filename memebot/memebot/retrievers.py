@@ -1,5 +1,5 @@
 import asyncio
-from collections.abc import Awaitable
+from collections.abc import Coroutine
 from datetime import timedelta
 from typing import Any
 
@@ -10,7 +10,7 @@ from memebot.config import get_german_news_cx_key, get_search_api_key
 
 class GermanNewsRetriever:
 
-    def __init__(self, **kwargs: dict[str, Any]) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         self.__search_api_key = get_search_api_key()
         self.__get_german_news_cx_key = get_german_news_cx_key()
         self.__base_url = "https://www.googleapis.com/customsearch/v1"
@@ -20,7 +20,7 @@ class GermanNewsRetriever:
 
     async def _search(
         self, client: httpx.AsyncClient, query: str, k: int
-    ) -> list[Awaitable[httpx.Response]]:
+    ) -> list[Coroutine[Any, Any, httpx.Response]]:
         params = dict(
             q=query,
             cx=self.__get_german_news_cx_key,
