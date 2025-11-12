@@ -76,11 +76,14 @@ async def index():
 
 @app.post("/webhook")
 async def telegram_webhook(request: Request) -> Response:
-    data = await request.json()
-    update = Update.de_json(data=data, bot=None)
+    try:
+        data = await request.json()
+        update = Update.de_json(data=data, bot=None)
+    except Exception:
+        return Response(content="ignored, invalid update format", status_code=HTTPStatus.OK)
     
     if not (message := update.message):
-        return Response(content="No message, ignored", status_code=HTTPStatus.OK)
+        return Response(content="ignored, no message", status_code=HTTPStatus.OK)
     
     # do not fail in any case, but log all errors
     try:
@@ -90,7 +93,7 @@ async def telegram_webhook(request: Request) -> Response:
         tb = traceback.format_exc()
         logger.error("%s\n%s", str(exc), tb)
 
-    return Response(status_code=HTTPStatus.OK)
+    return Response(content="OK", status_code=HTTPStatus.OK)
 
 
 def setup_webhook() -> None:
