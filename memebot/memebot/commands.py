@@ -1,12 +1,14 @@
 import abc
+from functools import cached_property
 from logging import getLogger
 from typing import final, override
 
 from telegram import Bot, Message
 
 from memebot.censor import DefaultCensor
-from memebot.config import get_channel_id, get_token
+from memebot.config import get_channel_id, get_explainer_config, get_token
 from memebot.explainer import Explainer, get_explainer
+from google.cloud import pubsub_v1
 
 logger = getLogger(__name__)
 
@@ -98,11 +100,32 @@ class ExplainCommand(CommandInterface):
             return False
         logger.info("Try to perform explain")
         return True
+    
+    @cached_property
+    def publisher(self) -> pubsub_v1.PublisherClient:
+        return pubsub_v1.PublisherClient()
+    
+    @cached_property
+    def topic(self) -> str:
+        return get_explainer_config().topic
 
     @override
     async def run(self) -> None:
-        if await self.validate(self.message):
-            await self.explainer.explain(self.message)
+        if not (await self.validate(self.message)):
+            return
+        publish_future = self.publisher.publish(
+            topic=self.topic,
+            data=self.message.to_json().encode("utf-8"),
+            message_id=str(self.message.message_id),
+            chat_id=str(self.message.chat.id),
+        )
+        publish_message_id: str = publish_future.result()
+        logger.info("Published explain request [msg: %s]: %s", str(self.message.message_id), publish_message_id)
+        await Bot(token=get_token()).send_message(
+            chat_id=self.message.chat.id,
+            reply_to_message_id=self.message.id,
+            text=f"Debug message: Published explain request [msg: {self.message.message_id}]: {publish_message_id}"
+        )
 
 
 COMMAND_REGISTRY: dict[str, type[CommandInterface]] = {

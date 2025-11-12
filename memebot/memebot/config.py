@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import logging
 import os
 from functools import cache
@@ -43,6 +44,22 @@ def get_channel_id() -> int:
 @cache
 def get_chat_id() -> int:
     return int(os.getenv("CHAT_ID", "1"))
+
+
+@dataclass
+class ExplainerConfig:
+    topic: str
+    subscription: str
+
+
+@cache
+def get_explainer_config() -> ExplainerConfig:
+    return ExplainerConfig(
+        topic=os.getenv("EXPLAIN_TOPIC", "projects/fake-proj/topics/explain"),
+        subscription=os.getenv(
+            "EXPLAIN_SUBSCRIPTION", "projects/fake-proj/subscriptions/sub-explain-pull"
+        ),
+    )
 
 
 ADMINS = {int(uid) for uid in os.getenv("ADMIN_IDS", "").split(",") if uid.strip()}
