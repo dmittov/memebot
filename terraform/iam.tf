@@ -11,10 +11,6 @@ resource "google_project_iam_custom_role" "memebot_role" {
     "datastore.entities.create",
     "datastore.entities.update",
     "datastore.entities.delete",
-
-    "pubsub.topics.publish",
-    "pubsub.topics.subscribe",
-
     "cloudtasks.tasks.create",
   ]
 }
