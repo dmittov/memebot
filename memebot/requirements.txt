@@ -1,10 +1,8 @@
-flask[async]>=3.0,<4.0
-requests>=2.31.0,<3.0
-gunicorn>=21.2,<22.0
+fastapi>=0.121,<1.0
 google-cloud-firestore>=2.13,<3.0
 google-cloud-secret-manager>=2.23.3,<3.0
 google-cloud-aiplatform>=1.96.0,<2.0
 python-telegram-bot>=22.1.0,<=23.0
-hypercorn
-git+https://github.com/stanfordnlp/dspy.git@3.0.0b2
+hypercorn>=0.18.0,<1.0
+dspy>=3.0,<4.0
 Pillow>=11.3.0,<12.0
