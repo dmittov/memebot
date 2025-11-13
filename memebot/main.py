@@ -10,14 +10,17 @@ from logging import getLogger
 from fastapi import FastAPI, Request, Response
 from telegram import Bot, Update
 
+from memebot import config
 from memebot.commands import CommandInterface, build_command
 from memebot.config import get_token
+from google.cloud import pubsub_v1
+
+from memebot.explainer import get_explainer
 
 logger = getLogger(__name__)
 
 
-@asynccontextmanager
-async def lifespan(_: FastAPI):
+async def set_webhook() -> None:
     """Sets the webhook for the Telegram Bot and manages its lifecycle (start/stop)."""
     if webhook_url := os.getenv("WEBHOOK_URL"):
         # https://core.telegram.org/bots/api#setwebhook
@@ -61,9 +64,28 @@ async def lifespan(_: FastAPI):
         except Exception:  # noqa: BLE001
             logging.exception("Could not set webhook")
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+        await set_webhook()
+
+        # TODO: hide in another contextmanager
+        app.state.subscriber = pubsub_v1.SubscriberClient()
+        app.state.subscriber_future = app.state.subscriber.subscribe(
+            subscription=config.get_explainer_config().subscription,
+            callback=get_explainer().pull_message
+        )
+        
+
         yield
 
-        ...
+        # stop subscriber on application shutdown
+        app.state.subscriber_future.cancel()
+        try:
+            await app.state.subscriber_future
+        except Exception:
+            ...
+        await app.state.subscriber_future.close()
 
 
 app = FastAPI(lifespan=lifespan)
