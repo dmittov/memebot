@@ -215,11 +215,7 @@ class Explainer:
         buffer = BytesIO()
         await hfile.download_to_memory(out=buffer)
         logger.info("Image downloaded: %d bytes", buffer.tell())
-        logger.info("Image downloaded: %d bytes", buffer.tell())
         buffer.seek(0)
-        image = Image.open(buffer)
-        logger.info("Image resolution: %s", repr(image.size))
-        return image
         image = Image.open(buffer)
         logger.info("Image resolution: %s", repr(image.size))
         return image
