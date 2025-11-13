@@ -1,7 +1,9 @@
+import json
 import logging
 from datetime import datetime, timedelta, timezone
 from functools import cache, cached_property
 from io import BytesIO
+import traceback
 
 import dspy
 import vertexai
@@ -10,6 +12,7 @@ from google.cloud.firestore import FieldFilter
 from PIL import Image
 from pydantic import BaseModel, Field
 from telegram import Bot, Message
+from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
 
 from memebot.config import MODEL_NAME, get_token
 from memebot.retrievers import GermanNewsRetriever
@@ -256,6 +259,17 @@ class Explainer:
             chat_id=message.chat.id, reply_to_message_id=message.id, text=explanation
         )
         self.__register(message=message)
+
+    async def pull_message(self, pubsub_msg: PubSubMessage) -> None:
+        try:
+            data = json.loads(pubsub_msg.data.decode("utf-8"))
+            message = Message.de_json(data=data, bot=None)
+            await self.explain(message)
+            pubsub_msg.ack()
+        except Exception as exc:
+            tb = traceback.format_exc()
+            logger.error("%s\n%s", str(exc), tb)
+            pubsub_msg.nack()
 
 
 @cache
