@@ -70,8 +70,8 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/")
-async def index():
-    return "OK", 200
+async def index() -> Response:
+    return Response(content="OK", status_code=HTTPStatus.OK)
 
 
 @app.post("/webhook")
