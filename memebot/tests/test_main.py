@@ -13,7 +13,7 @@ class TestWebhook:
 
     def test_no_json(self, client: TestClient) -> None:
         payload = "No Json Payload"
-        response = client.post(self.link, data=payload)
+        response = client.post(self.link, content=payload)
         assert response.status_code == 200
         assert response.text == "ignored, invalid update format"
 
