@@ -59,15 +59,6 @@ class ExplainCommand(CommandInterface):
     async def validate(self, message: Message) -> bool:
         """Check the message is sent in a super-group
         and there is a picture to explain"""
-        # if the message is missing required attributes, it's ignored
-        # if (
-        #     (message.chat.type != "supergroup")
-        #     or (message.reply_to_message.sender_chat.id != get_channel_id())
-        # ):
-        #     await get_bot().send_message(
-        #         chat_id=message.chat.id, text="Explain works just in channel chats"
-        #     )
-        #     return False
         logger.info(message)
         if message.chat.type != "supergroup":
             await Bot(token=get_token()).send_message(
