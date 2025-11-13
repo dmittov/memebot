@@ -3,7 +3,7 @@ from functools import cached_property
 from logging import getLogger
 from typing import final, override
 
-from google.cloud import pubsub_v1
+from google.cloud.pubsub_v1 import PublisherClient
 from telegram import Bot, Message
 
 from memebot.censor import DefaultCensor
@@ -93,8 +93,8 @@ class ExplainCommand(CommandInterface):
         return True
 
     @cached_property
-    def publisher(self) -> pubsub_v1.PublisherClient:
-        return pubsub_v1.PublisherClient()
+    def publisher(self) -> PublisherClient:
+        return PublisherClient()
 
     @cached_property
     def topic(self) -> str:
