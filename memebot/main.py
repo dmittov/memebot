@@ -8,13 +8,12 @@ from http import HTTPStatus
 from logging import getLogger
 
 from fastapi import FastAPI, Request, Response
+from google.cloud import pubsub_v1
 from telegram import Bot, Update
 
 from memebot import config
 from memebot.commands import CommandInterface, build_command
 from memebot.config import get_token
-from google.cloud import pubsub_v1
-
 from memebot.explainer import get_explainer
 
 logger = getLogger(__name__)
@@ -67,25 +66,24 @@ async def set_webhook() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-        await set_webhook()
+    await set_webhook()
 
-        # TODO: hide in another contextmanager
-        app.state.subscriber = pubsub_v1.SubscriberClient()
-        app.state.subscriber_future = app.state.subscriber.subscribe(
-            subscription=config.get_explainer_config().subscription,
-            callback=get_explainer().pull_message
-        )
-        
+    # TODO: hide in another contextmanager
+    app.state.subscriber = pubsub_v1.SubscriberClient()
+    app.state.subscriber_future = app.state.subscriber.subscribe(
+        subscription=config.get_explainer_config().subscription,
+        callback=get_explainer().pull_message,
+    )
 
-        yield
+    yield
 
-        # stop subscriber on application shutdown
-        app.state.subscriber_future.cancel()
-        try:
-            await app.state.subscriber_future
-        except Exception:
-            ...
-        await app.state.subscriber_future.close()
+    # stop subscriber on application shutdown
+    app.state.subscriber_future.cancel()
+    try:
+        await app.state.subscriber_future
+    except Exception:
+        ...
+    await app.state.subscriber_future.close()
 
 
 app = FastAPI(lifespan=lifespan)

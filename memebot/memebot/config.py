@@ -1,6 +1,6 @@
-from dataclasses import dataclass
 import logging
 import os
+from dataclasses import dataclass
 from functools import cache
 
 import google.cloud.secretmanager as sm

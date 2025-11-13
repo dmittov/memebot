@@ -1,18 +1,18 @@
 import json
 import logging
+import traceback
 from datetime import datetime, timedelta, timezone
 from functools import cache, cached_property
 from io import BytesIO
-import traceback
 
 import dspy
 import vertexai
 from google.cloud import firestore
 from google.cloud.firestore import FieldFilter
+from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
 from PIL import Image
 from pydantic import BaseModel, Field
 from telegram import Bot, Message
-from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
 
 from memebot.config import MODEL_NAME, get_token
 from memebot.retrievers import GermanNewsRetriever
