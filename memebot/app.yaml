@@ -1,4 +1,4 @@
-runtime: python312
+runtime: python313
 entrypoint: hypercorn -b :$PORT main:app
 # 0.5 vCPU 512Mb
 instance_class: F2

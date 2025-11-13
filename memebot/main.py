@@ -3,53 +3,22 @@ from __future__ import annotations
 import logging
 import os
 import traceback
+from contextlib import asynccontextmanager
+from http import HTTPStatus
 from logging import getLogger
 
-from flask import Flask, request
+from fastapi import FastAPI, Request, Response
 from telegram import Bot, Update
 
 from memebot.commands import CommandInterface, build_command
 from memebot.config import get_token
 
-app = Flask(__name__)
 logger = getLogger(__name__)
 
 
-@app.get("/")
-def index():
-    return "OK", 200
-
-
-@app.post("/webhook")
-async def telegram_webhook():
-    try:
-        data: dict = request.get_json(force=True, silent=True) or {}
-        update: Update = Update.de_json(
-            data=data,
-            bot=None,
-        )
-        logger.debug("update: %s", update)
-    except TypeError as exc:
-        logger.error("Invalid update format: %s", str(exc))
-        return "ignored, invalid update format", 200
-    except Exception as exc:
-        logger.error("Unexpected error %s", str(exc))
-        return "ignored", 200
-
-    if not (message := update.message):
-        return "ignored, no message", 200
-
-    # do not fail in any case, but log all errors
-    try:
-        command: CommandInterface = build_command(message)
-        await command.run()
-    except Exception as exc:
-        tb = traceback.format_exc()
-        logger.error("%s\n%s", str(exc), tb)
-    return "OK", 200
-
-
-def setup_webhook() -> None:
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Sets the webhook for the Telegram Bot and manages its lifecycle (start/stop)."""
     if webhook_url := os.getenv("WEBHOOK_URL"):
         # https://core.telegram.org/bots/api#setwebhook
         # allowed_updates = all types except
@@ -85,13 +54,45 @@ def setup_webhook() -> None:
             "removed_chat_boost",
         ]
         try:
-            app.ensure_sync(Bot(token=get_token()).set_webhook)(
+            await Bot(token=get_token()).set_webhook(
                 url=webhook_url,
                 allowed_updates=allowed_updates,
             )
         except Exception:  # noqa: BLE001
             logging.exception("Could not set webhook")
 
+        yield
 
-if __name__ == "__main__":
-    setup_webhook()
+        ...
+
+
+app = FastAPI(lifespan=lifespan)
+
+
+@app.get("/")
+async def index() -> Response:
+    return Response(content="OK", status_code=HTTPStatus.OK)
+
+
+@app.post("/webhook")
+async def telegram_webhook(request: Request) -> Response:
+    try:
+        data = await request.json()
+        update = Update.de_json(data=data, bot=None)
+    except Exception:  # noqa: BLE001
+        return Response(
+            content="ignored, invalid update format", status_code=HTTPStatus.OK
+        )
+
+    if not (message := update.message):
+        return Response(content="ignored, no message", status_code=HTTPStatus.OK)
+
+    # do not fail in any case, but log all errors
+    try:
+        command: CommandInterface = build_command(message)
+        await command.run()
+    except Exception as exc:
+        tb = traceback.format_exc()
+        logger.error("%s\n%s", str(exc), tb)
+
+    return Response(content="OK", status_code=HTTPStatus.OK)
