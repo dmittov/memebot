@@ -147,7 +147,6 @@ async def pubsub(
         yield proc
     finally:
         os.killpg(proc.pid, signal.SIGTERM)
-        proc.terminate()
         try:
             await asyncio.wait_for(proc.wait(), timeout=timeout_sec)
         except asyncio.TimeoutError:
