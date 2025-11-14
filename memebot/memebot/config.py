@@ -55,9 +55,9 @@ class ExplainerConfig:
 @cache
 def get_explainer_config() -> ExplainerConfig:
     return ExplainerConfig(
-        topic=os.getenv("EXPLAIN_TOPIC", "projects/fake-proj/topics/explain"),
+        topic=os.getenv("EXPLAIN_TOPIC", "projects/test-project/topics/explain"),
         subscription=os.getenv(
-            "EXPLAIN_SUBSCRIPTION", "projects/fake-proj/subscriptions/sub-explain-pull"
+            "EXPLAIN_SUBSCRIPTION", "projects/test-project/subscriptions/sub-explain-pull"
         ),
     )
 
