@@ -5,6 +5,7 @@ import pytest
 from PIL import Image
 from pytest_mock import MockerFixture
 from telegram import Bot, Chat, Message, PhotoSize
+from google.cloud.pubsub_v1 import PublisherClient
 
 import memebot.commands as commands
 from memebot.config import get_channel_id
@@ -64,6 +65,10 @@ class TestExplainCommand:
             "memebot.explainer.Bot",
             return_value=bot_mock,
         )
+        _ = mocker.patch(
+            "memebot.commands.Bot",
+            return_value=bot_mock,
+        )
         model_mock = mocker.MagicMock(spec=dspy.Predict)
         _ = mocker.patch(
             "memebot.explainer.dspy.Predict",
@@ -82,6 +87,17 @@ class TestExplainCommand:
         mock_get_image.return_value = Image.new(
             mode="RGB", size=(200, 200), color=(255, 255, 255)
         )
+
+        publisher_mock = mocker.MagicMock(spec=PublisherClient)
+        _ = mocker.patch("memebot.commands.PublisherClient", return_value=publisher_mock)
+        # publish_future = self.publisher.publish(
+        #     topic=self.topic,
+        #     data=self.message.to_json().encode("utf-8"),
+        #     message_id=str(self.message.message_id),
+        #     chat_id=str(self.message.chat.id),
+        # )
+        # publish_message_id: str = publish_future.result()
+
         message._unfreeze()
         message.text = "/explain"
         message.chat = Chat(
@@ -107,8 +123,20 @@ class TestExplainCommand:
             ],
             caption="Es ist Mittwoch, meine Kerle",
         )
-
         message._freeze()
         command = commands.ExplainCommand(message)
         await command.run()
         assert bot_mock.send_message.call_count == 1
+
+    @pytest.mark.skip
+    @pytest.mark.asyncio
+    async def test_explain_put(self, mocker: MockerFixture, message: Message) -> None:
+        # requires Pub/Sub emulator
+        ...
+        
+
+    @pytest.mark.skip
+    @pytest.mark.asyncio
+    async def test_explain_pull(self, mocker: MockerFixture, message: Message) -> None:
+        # requires Pub/Sub emulator
+        ...
