@@ -12,6 +12,7 @@ import memebot.commands as commands
 from memebot.config import get_explainer_config
 from memebot.explainer import Explainer
 from tests.helpers import clean_subscription
+from google.api_core.exceptions import DeadlineExceeded
 
 
 @pytest.mark.parametrize(
@@ -141,13 +142,16 @@ class TestExplainCommand:
         await command.run()
 
         subscriber = SubscriberClient()
-        response = subscriber.pull(
-            subscription=get_explainer_config().subscription,
-            max_messages=1,
-            return_immediately=True,
-        )
+        try:
+            response = subscriber.pull(
+                subscription=get_explainer_config().subscription,
+                max_messages=10,
+                timeout=0.1,  # give 100ms for the message to be processed by Pub/Sub
+            )
+        except DeadlineExceeded:
+            assert 0 > 0  # no messages found in a topic, expected > 0 messages
 
-        assert len(response.received_messages) > 0
+        assert len(response.received_messages) == 1
         pubsub_msg = response.received_messages[0].message
         data = json.loads(pubsub_msg.data.decode("utf-8"))
         restored_message = Message.de_json(data=data, bot=None)
