@@ -275,6 +275,7 @@ class Explainer:
 
     async def pull_message(self, pubsub_msg: PubSubMessage) -> None:
         try:
+            logger.info("Fetching explain message")
             data = json.loads(pubsub_msg.data.decode("utf-8"))
             message = Message.de_json(data=data, bot=None)
             await self.explain(message)

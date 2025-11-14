@@ -89,7 +89,7 @@ class ExplainCommand(CommandInterface):
                 text="Can comment just photos for yet, no photo found.",
             )
             return False
-        logger.info("Try to perform explain")
+        logger.info("Message is valid for explain")
         return True
 
     @cached_property
