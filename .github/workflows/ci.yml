@@ -26,5 +26,5 @@ jobs:
         run: mypy .
         working-directory: memebot
       - name: Run tests
-        run: pytest -n auto -m "not emulation"
+        run: pytest -n auto -m "not emulation" --dist loadgroup
         working-directory: memebot
