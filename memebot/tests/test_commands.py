@@ -1,4 +1,3 @@
-import datetime
 import json
 from asyncio.subprocess import Process
 
@@ -7,10 +6,10 @@ import pytest
 from google.cloud.pubsub_v1 import PublisherClient, SubscriberClient
 from PIL import Image
 from pytest_mock import MockerFixture
-from telegram import Bot, Chat, Message, PhotoSize
+from telegram import Bot, Message
 
 import memebot.commands as commands
-from memebot.config import get_channel_id, get_explainer_config
+from memebot.config import get_explainer_config
 from memebot.explainer import Explainer
 
 
@@ -79,7 +78,7 @@ class TestExplainCommand:
         # avoid calling vertexai.init()
         _ = mocker.patch(
             "memebot.commands.get_explainer",
-            return_value=Explainer("no_model"),
+            return_value=Explainer(),
         )
         mock_get_image = mocker.patch("memebot.explainer.Explainer.get_image")
         mock_news_retriver = mocker.patch(
@@ -100,12 +99,11 @@ class TestExplainCommand:
         assert bot_mock.send_message.call_count == 1
 
     @pytest.mark.xdist_group("pubsub")
-    @pytest.mark.emulation
+    @pytest.mark.pubsub
     @pytest.mark.asyncio
     async def test_explain_put(
         self, mocker: MockerFixture, explain_message: Message, pubsub: Process
     ) -> None:
-        # requires Pub/Sub emulator
         _ = pubsub
         bot_mock = mocker.MagicMock(spec=Bot)
         _ = mocker.patch("memebot.explainer.firestore", autospec=True)
@@ -125,7 +123,7 @@ class TestExplainCommand:
         # avoid calling vertexai.init()
         _ = mocker.patch(
             "memebot.commands.get_explainer",
-            return_value=Explainer("no_model"),
+            return_value=Explainer(),
         )
         mock_get_image = mocker.patch("memebot.explainer.Explainer.get_image")
         mock_news_retriver = mocker.patch(

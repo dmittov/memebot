@@ -1,6 +1,9 @@
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = "."
+markers = [
+    "pubsub: tests that require pubsub emulator",
+]
 
 [tool.mypy]
 python_version = "3.12"

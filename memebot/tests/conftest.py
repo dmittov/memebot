@@ -8,6 +8,7 @@ import socket
 from collections.abc import AsyncGenerator
 from typing import Generator
 
+import dspy
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
@@ -69,6 +70,13 @@ def explain_message(message: Message) -> Message:
     )
     message._freeze()
     return message
+
+
+@pytest.fixture(scope="session")
+def lm(session_mocker: MockerFixture) -> dspy.LM:
+    lm = session_mocker.MagicMock(spec=dspy.LM)
+    dspy.configure(lm=lm)
+    return lm
 
 
 @pytest_asyncio.fixture(scope="session")

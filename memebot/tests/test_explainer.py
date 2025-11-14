@@ -42,21 +42,22 @@ class TestExplainer:
             temperature=0.0,
             max_tokens=16384,
         )
-        explainer = Explainer(lm=lm)
+        dspy.configure(lm=lm)
+        explainer = Explainer()
         result = await explainer._explain(
             caption="Лицо на фото: Julia Ruhs", image=image
         )
         assert result.explanation is not None
 
     @pytest.mark.xdist_group("pubsub")
-    @pytest.mark.emulation
+    @pytest.mark.pubsub
     @pytest.mark.asyncio
     async def test_pulling(
-        self, mocker: MockerFixture, explain_message: Message, pubsub: Process
+        self, lm: dspy.LM, mocker: MockerFixture, explain_message: Message, pubsub: Process
     ) -> None:
         _ = pubsub
-        lm = mocker.MagicMock(spec=dspy.LM)
-        explainer = Explainer(lm=lm)
+        _ = lm
+        explainer = Explainer()
         mock_pull_message = mocker.patch("memebot.explainer.Explainer.pull_message")
 
         # make sure the topic is empty
@@ -91,8 +92,7 @@ class TestExplainer:
     async def test_pull_message(
         self, mocker: MockerFixture, explain_message: Message
     ) -> None:
-        lm = mocker.MagicMock(spec=dspy.LM)
-        explainer = Explainer(lm=lm)
+        explainer = Explainer()
         mock_explain = mocker.patch("memebot.explainer.Explainer.explain")
 
         _raw_proto_pubbsub_message = gapic_types.PubsubMessage.pb()

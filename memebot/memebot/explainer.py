@@ -133,10 +133,9 @@ class Explainer:
     # TODO: fix race condition
     # TODO: check allows another request in 24hrs
 
-    def __init__(self, lm: dspy.LM) -> None:
+    def __init__(self) -> None:
         self.n_generations_limit = 10
         self.n_hour_limit = 24
-        dspy.configure(lm=lm)
 
     @contextmanager
     def subscription(self) -> Generator[None, None, None]:
@@ -293,4 +292,5 @@ def get_explainer() -> Explainer:
         temperature=0.0,
         max_tokens=16384,
     )
-    return Explainer(lm=lm)
+    dspy.configure(lm=lm)
+    return Explainer()
