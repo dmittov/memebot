@@ -1,4 +1,6 @@
+from asyncio.subprocess import Process
 import datetime
+import json
 
 import dspy
 import pytest
@@ -6,9 +8,10 @@ from PIL import Image
 from pytest_mock import MockerFixture
 from telegram import Bot, Chat, Message, PhotoSize
 from google.cloud.pubsub_v1 import PublisherClient
+from google.cloud.pubsub_v1 import SubscriberClient
 
 import memebot.commands as commands
-from memebot.config import get_channel_id
+from memebot.config import get_channel_id, get_explainer_config
 from memebot.explainer import Explainer
 
 
@@ -90,13 +93,6 @@ class TestExplainCommand:
 
         publisher_mock = mocker.MagicMock(spec=PublisherClient)
         _ = mocker.patch("memebot.commands.PublisherClient", return_value=publisher_mock)
-        # publish_future = self.publisher.publish(
-        #     topic=self.topic,
-        #     data=self.message.to_json().encode("utf-8"),
-        #     message_id=str(self.message.message_id),
-        #     chat_id=str(self.message.chat.id),
-        # )
-        # publish_message_id: str = publish_future.result()
 
         message._unfreeze()
         message.text = "/explain"
@@ -128,12 +124,90 @@ class TestExplainCommand:
         await command.run()
         assert bot_mock.send_message.call_count == 1
 
-    @pytest.mark.skip
+    @pytest.mark.xdist_group("pubsub")
     @pytest.mark.asyncio
-    async def test_explain_put(self, mocker: MockerFixture, message: Message) -> None:
+    async def test_explain_put(self, mocker: MockerFixture, message: Message, pubsub: Process) -> None:
         # requires Pub/Sub emulator
-        ...
+        _ = pubsub
+        bot_mock = mocker.MagicMock(spec=Bot)
+        _ = mocker.patch("memebot.explainer.firestore", autospec=True)
+        _ = mocker.patch(
+            "memebot.explainer.Bot",
+            return_value=bot_mock,
+        )
+        _ = mocker.patch(
+            "memebot.commands.Bot",
+            return_value=bot_mock,
+        )
+        model_mock = mocker.MagicMock(spec=dspy.Predict)
+        _ = mocker.patch(
+            "memebot.explainer.dspy.Predict",
+            return_value=model_mock,
+        )
+        # avoid calling vertexai.init()
+        _ = mocker.patch(
+            "memebot.commands.get_explainer",
+            return_value=Explainer("no_model"),
+        )
+        mock_get_image = mocker.patch("memebot.explainer.Explainer.get_image")
+        mock_news_retriver = mocker.patch(
+            "memebot.explainer.GermanNewsRetriever"
+        ).return_value
+        mock_news_retriver.search = mocker.AsyncMock(return_value=["Text1", "Text2"])
+        mock_get_image.return_value = Image.new(
+            mode="RGB", size=(200, 200), color=(255, 255, 255)
+        )
+        message._unfreeze()
+        message.text = "/explain"
+        message.chat = Chat(
+            type="supergroup",
+            id=get_channel_id(),
+        )
+        message.reply_to_message = Message(
+            message_id=2,
+            date=datetime.datetime.now(datetime.timezone.utc),
+            sender_chat=Chat(id=get_channel_id(), type="channel"),
+            chat=Chat(
+                type="supergroup",
+                id=get_channel_id(),
+            ),
+            photo=[
+                PhotoSize(
+                    file_id="AgACAgIAAxkBAAPCaD_nTtiDmdw0A6l-iExxgpTY708AAibwMRtgXAABSnQ4QNG5CmZMAQADAgADeAADNgQ",
+                    file_unique_id="AQADJvAxG2BcAAFKfQ",
+                    file_size=87201,
+                    width=700,
+                    height=700,
+                )
+            ],
+            caption="Es ist Mittwoch, meine Kerle",
+        )
+        message._freeze()
+
+        subscriber = SubscriberClient()
+        command = commands.ExplainCommand(message)
         
+        # drain subscription
+        # it should be empty
+        while subscriber.pull(
+            subscription=get_explainer_config().subscription,
+            max_messages=100,
+            return_immediately=True,
+            ):
+            ...
+
+        await command.run()
+
+        response = subscriber.pull(
+            subscription=get_explainer_config().subscription,
+            max_messages=1,
+            return_immediately=True,
+        )
+        assert len(response.received_messages) > 0
+        pubsub_msg = response.received_messages[0].message
+        data = json.loads(pubsub_msg.data.decode("utf-8"))
+        restored_message = Message.de_json(data=data, bot=None)
+        assert restored_message.text == message.text        
 
     @pytest.mark.skip
     @pytest.mark.asyncio
