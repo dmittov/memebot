@@ -26,8 +26,5 @@ handlers:
   - url: /webhook
     script: auto
 
-  - url: /pubsub/.*
-    script: auto
-
   - url: /.*
     script: auto
