@@ -28,7 +28,7 @@ class TestExplainer:
     # No GCP auth in testing env
     @pytest.mark.skip
     async def test_search(self) -> None:
-        image = Image.open("tests/img/grune.jpg")
+        image = Image.open("tests/img/ruhs.jpg")
         vertexai.init()
         lm = dspy.LM(
             "vertex_ai/gemini-2.5-pro",
@@ -36,5 +36,7 @@ class TestExplainer:
             max_tokens=16384,
         )
         explainer = Explainer(lm=lm)
-        result = await explainer._explain(caption="", image=image)
+        result = await explainer._explain(
+            caption="Лицо на фото: Julia Ruhs", image=image
+        )
         assert result.explanation is not None
