@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 import logging
 import os
 import traceback
@@ -65,14 +66,11 @@ async def set_webhook() -> None:
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     await set_webhook()
     app.state.explainer = get_explainer()
-    app.state.explainer.start_pulling()
-
-    yield
-
-    app.state.explainer.stop_pulling()
+    with app.state.explainer.subscription():
+        yield
 
 
 app = FastAPI(lifespan=lifespan)
