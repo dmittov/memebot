@@ -26,7 +26,7 @@ def client() -> Generator[TestClient, None, None]:
 
 
 @pytest.fixture
-def message() -> Generator[Message, None, None]:
+def message() -> Message:
     """Minimal Telegram-style message structure reused in several tests."""
     message = Message.de_json(
         {
@@ -36,11 +36,11 @@ def message() -> Generator[Message, None, None]:
             "date": int(datetime.datetime.now(datetime.timezone.utc).timestamp()),
         }
     )
-    yield message
+    return message
 
 
 @pytest.fixture
-def explain_message(message: Message) -> Generator[Message, None, None]:
+def explain_message(message: Message) -> Message:
     message = Message.de_json(data=json.loads(message.to_json()), bot=None)
     message._unfreeze()
     message.text = "/explain"
