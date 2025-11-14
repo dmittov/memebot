@@ -1,3 +1,5 @@
+from collections.abc import Generator
+from contextlib import contextmanager
 import json
 import logging
 import traceback
@@ -136,14 +138,14 @@ class Explainer:
         self.n_hour_limit = 24
         dspy.configure(lm=lm)
 
-    def start_pulling(self) -> None:
+    @contextmanager
+    def subscription(self) -> Generator[None, None, None]:
         self.__subscriber = SubscriberClient()
         self.__subscriber_future = self.__subscriber.subscribe(
             subscription=get_explainer_config().subscription,
             callback=self.pull_message,
         )
-
-    def stop_pulling(self) -> None:
+        yield
         self.__subscriber_future.cancel()
         try:
             self.__subscriber_future.result()

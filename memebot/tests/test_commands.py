@@ -60,7 +60,7 @@ class TestExplainCommand:
 
     @pytest.mark.asyncio
     async def test_explain_success(
-        self, mocker: MockerFixture, message: Message
+        self, mocker: MockerFixture, explain_message: Message
     ) -> None:
         bot_mock = mocker.MagicMock(spec=Bot)
         _ = mocker.patch("memebot.explainer.firestore", autospec=True)
@@ -94,40 +94,15 @@ class TestExplainCommand:
         publisher_mock = mocker.MagicMock(spec=PublisherClient)
         _ = mocker.patch("memebot.commands.PublisherClient", return_value=publisher_mock)
 
-        message._unfreeze()
-        message.text = "/explain"
-        message.chat = Chat(
-            type="supergroup",
-            id=get_channel_id(),
-        )
-        message.reply_to_message = Message(
-            message_id=2,
-            date=datetime.datetime.now(datetime.timezone.utc),
-            sender_chat=Chat(id=get_channel_id(), type="channel"),
-            chat=Chat(
-                type="supergroup",
-                id=get_channel_id(),
-            ),
-            photo=[
-                PhotoSize(
-                    file_id="AgACAgIAAxkBAAPCaD_nTtiDmdw0A6l-iExxgpTY708AAibwMRtgXAABSnQ4QNG5CmZMAQADAgADeAADNgQ",
-                    file_unique_id="AQADJvAxG2BcAAFKfQ",
-                    file_size=87201,
-                    width=700,
-                    height=700,
-                )
-            ],
-            caption="Es ist Mittwoch, meine Kerle",
-        )
-        message._freeze()
-        command = commands.ExplainCommand(message)
+
+        command = commands.ExplainCommand(explain_message)
         await command.run()
         assert bot_mock.send_message.call_count == 1
 
     @pytest.mark.xdist_group("pubsub")
     @pytest.mark.emulation
     @pytest.mark.asyncio
-    async def test_explain_put(self, mocker: MockerFixture, message: Message, pubsub: Process) -> None:
+    async def test_explain_put(self, mocker: MockerFixture, explain_message: Message, pubsub: Process) -> None:
         # requires Pub/Sub emulator
         _ = pubsub
         bot_mock = mocker.MagicMock(spec=Bot)
@@ -158,35 +133,8 @@ class TestExplainCommand:
         mock_get_image.return_value = Image.new(
             mode="RGB", size=(200, 200), color=(255, 255, 255)
         )
-        message._unfreeze()
-        message.text = "/explain"
-        message.chat = Chat(
-            type="supergroup",
-            id=get_channel_id(),
-        )
-        message.reply_to_message = Message(
-            message_id=2,
-            date=datetime.datetime.now(datetime.timezone.utc),
-            sender_chat=Chat(id=get_channel_id(), type="channel"),
-            chat=Chat(
-                type="supergroup",
-                id=get_channel_id(),
-            ),
-            photo=[
-                PhotoSize(
-                    file_id="AgACAgIAAxkBAAPCaD_nTtiDmdw0A6l-iExxgpTY708AAibwMRtgXAABSnQ4QNG5CmZMAQADAgADeAADNgQ",
-                    file_unique_id="AQADJvAxG2BcAAFKfQ",
-                    file_size=87201,
-                    width=700,
-                    height=700,
-                )
-            ],
-            caption="Es ist Mittwoch, meine Kerle",
-        )
-        message._freeze()
-
         subscriber = SubscriberClient()
-        command = commands.ExplainCommand(message)
+        command = commands.ExplainCommand(explain_message)
         
         # drain subscription
         # it should be empty
@@ -208,10 +156,4 @@ class TestExplainCommand:
         pubsub_msg = response.received_messages[0].message
         data = json.loads(pubsub_msg.data.decode("utf-8"))
         restored_message = Message.de_json(data=data, bot=None)
-        assert restored_message.text == message.text        
-
-    @pytest.mark.skip
-    @pytest.mark.asyncio
-    async def test_explain_pull(self, mocker: MockerFixture, message: Message) -> None:
-        # requires Pub/Sub emulator
-        ...
+        assert restored_message.text == explain_message.text        

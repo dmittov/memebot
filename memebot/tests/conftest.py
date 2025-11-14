@@ -2,6 +2,7 @@ import asyncio
 from collections.abc import AsyncGenerator
 import contextlib
 import datetime
+import json
 import os
 import signal
 import socket
@@ -11,11 +12,11 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
-from telegram import Message
+from telegram import Chat, Message, PhotoSize
 from google.cloud.pubsub_v1 import PublisherClient, SubscriberClient
 
 from main import app
-from memebot.config import get_explainer_config
+from memebot.config import get_channel_id, get_explainer_config
 
 
 @pytest.fixture
@@ -36,6 +37,37 @@ def message() -> Generator[Message, None, None]:
         }
     )
     yield message
+
+@pytest.fixture
+def explain_message(message: Message) -> Generator[Message, None, None]:
+        message = Message.de_json(data=json.loads(message.to_json()), bot=None)
+        message._unfreeze()
+        message.text = "/explain"
+        message.chat = Chat(
+            type="supergroup",
+            id=get_channel_id(),
+        )
+        message.reply_to_message = Message(
+            message_id=2,
+            date=datetime.datetime.now(datetime.timezone.utc),
+            sender_chat=Chat(id=get_channel_id(), type="channel"),
+            chat=Chat(
+                type="supergroup",
+                id=get_channel_id(),
+            ),
+            photo=[
+                PhotoSize(
+                    file_id="AgACAgIAAxkBAAPCaD_nTtiDmdw0A6l-iExxgpTY708AAibwMRtgXAABSnQ4QNG5CmZMAQADAgADeAADNgQ",
+                    file_unique_id="AQADJvAxG2BcAAFKfQ",
+                    file_size=87201,
+                    width=700,
+                    height=700,
+                )
+            ],
+            caption="Es ist Mittwoch, meine Kerle",
+        )
+        message._freeze()
+        return message    
 
 
 @pytest_asyncio.fixture(scope="session")
