@@ -11,6 +11,7 @@ from telegram import Bot, Message
 import memebot.commands as commands
 from memebot.config import get_explainer_config
 from memebot.explainer import Explainer
+from tests.helpers import clean_subscription
 
 
 @pytest.mark.parametrize(
@@ -133,25 +134,19 @@ class TestExplainCommand:
         mock_get_image.return_value = Image.new(
             mode="RGB", size=(200, 200), color=(255, 255, 255)
         )
-        subscriber = SubscriberClient()
+
+        clean_subscription(get_explainer_config().subscription)
+
         command = commands.ExplainCommand(explain_message)
-
-        # drain subscription
-        # it should be empty
-        while subscriber.pull(
-            subscription=get_explainer_config().subscription,
-            max_messages=100,
-            return_immediately=True,
-        ):
-            ...
-
         await command.run()
 
+        subscriber = SubscriberClient()
         response = subscriber.pull(
             subscription=get_explainer_config().subscription,
             max_messages=1,
             return_immediately=True,
         )
+
         assert len(response.received_messages) > 0
         pubsub_msg = response.received_messages[0].message
         data = json.loads(pubsub_msg.data.decode("utf-8"))

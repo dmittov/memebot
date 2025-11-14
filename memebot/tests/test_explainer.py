@@ -7,7 +7,7 @@ import dspy
 import google.pubsub_v1.types as gapic_types
 import pytest
 import vertexai
-from google.cloud.pubsub_v1 import PublisherClient, SubscriberClient
+from google.cloud.pubsub_v1 import PublisherClient
 from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
 from PIL import Image
 from pytest_mock import MockerFixture
@@ -15,6 +15,7 @@ from telegram import Bot, Message
 
 from memebot.config import get_explainer_config, get_token
 from memebot.explainer import Explainer
+from tests.helpers import clean_subscription
 
 
 class TestExplainer:
@@ -60,16 +61,7 @@ class TestExplainer:
         explainer = Explainer()
         mock_pull_message = mocker.patch("memebot.explainer.Explainer.pull_message")
 
-        # make sure the topic is empty
-        subscriber = SubscriberClient()
-        # drain subscription
-        # it should be empty
-        while subscriber.pull(
-            subscription=get_explainer_config().subscription,
-            max_messages=100,
-            return_immediately=True,
-        ):
-            ...
+        clean_subscription(get_explainer_config().subscription)
 
         # now publish a message
         publisher = PublisherClient()
