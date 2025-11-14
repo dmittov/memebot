@@ -3,16 +3,19 @@ from collections.abc import AsyncGenerator
 import contextlib
 import datetime
 import os
+import signal
 import socket
-import time
 from typing import Generator
 
 import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from telegram import Message
+from google.cloud.pubsub_v1 import PublisherClient, SubscriberClient
 
 from main import app
+from memebot.config import get_explainer_config
 
 
 @pytest.fixture
@@ -35,8 +38,8 @@ def message() -> Generator[Message, None, None]:
     yield message
 
 
-@pytest.fixture
-async def pubsub(mocker: MockerFixture) -> AsyncGenerator[asyncio.subprocess.Process]:
+@pytest_asyncio.fixture(scope="session")
+async def pubsub(session_mocker: MockerFixture) -> AsyncGenerator[asyncio.subprocess.Process]:
     # install emulator:
     # $ gcloud components install beta
     # $ gcloud components install pubsub-emulator
@@ -53,38 +56,53 @@ async def pubsub(mocker: MockerFixture) -> AsyncGenerator[asyncio.subprocess.Pro
         f"--host-port={host}:{port}",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
+        start_new_session=True,  # start a new process group
     )
+    # if something went wrong with the pub/sub emulator boot,
+    # we get an exception from the wait_for_emulator
 
-    async def wait_for_emulator() -> None:
+    def wait_for_emulator() -> None:
         # wait for emulator is ready
         start_time = asyncio.get_event_loop().time()
-        while (asyncio.get_event_loop().time() - start_time) > timeout_sec:
+        while (asyncio.get_event_loop().time() - start_time) < timeout_sec:
             try:
                 with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
                     sock.settimeout(0.1)  # 100ms for socket is enough
                     if sock.connect_ex((host, port)) == 0:
                         return
             except OSError:
-                # not ready yet
+                # pub/sub emulator is not ready yet
+                # just repeat until we hit the timeout
                 ...
         # timeout exceed
         raise RuntimeError("Couldn't start Pub/Sub Emulator")
 
-    mocker.patch.dict(
+    session_mocker.patch.dict(
         os.environ,
         {
             "PUBSUB_EMULATOR_HOST": f"{host}:{port}",
             "GOOGLE_CLOUD_PROJECT": "test-project",
         },
     )
+
+    def create_topic() -> None:
+        publisher = PublisherClient()
+        publisher.create_topic(name=get_explainer_config().topic)
+
+    def create_subscription() -> None:
+        subscriber = SubscriberClient()
+        subscriber.create_subscription(name=get_explainer_config().subscription, topic=get_explainer_config().topic)
     
     try:
-        await wait_for_emulator()
+        wait_for_emulator()
+        create_topic()
+        create_subscription()
         yield proc
     finally:
+        os.killpg(proc.pid, signal.SIGTERM)
         proc.terminate()
         try:
             await asyncio.wait_for(proc.wait(), timeout=timeout_sec)
         except asyncio.TimeoutError:
-            proc.kill()
+            os.killpg(proc.pid, signal.SIGKILL)
             await proc.wait()
