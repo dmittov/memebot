@@ -8,7 +8,7 @@ from http import HTTPStatus
 from logging import getLogger
 
 from fastapi import FastAPI, Request, Response
-from google.cloud.pubsub_v1 import SubscriberClient
+
 from telegram import Bot, Update
 
 from memebot import config
@@ -67,23 +67,12 @@ async def set_webhook() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await set_webhook()
-
-    # TODO: hide in another contextmanager
-    app.state.subscriber = SubscriberClient()
-    app.state.subscriber_future = app.state.subscriber.subscribe(
-        subscription=config.get_explainer_config().subscription,
-        callback=get_explainer().pull_message,
-    )
+    app.state.explainer = get_explainer()
+    app.state.explainer.start_pulling()
 
     yield
 
-    # stop subscriber on application shutdown
-    app.state.subscriber_future.cancel()
-    try:
-        await app.state.subscriber_future
-    except Exception:
-        ...
-    await app.state.subscriber_future.close()
+    app.state.explainer.stop_pulling()
 
 
 app = FastAPI(lifespan=lifespan)

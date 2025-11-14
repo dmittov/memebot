@@ -13,8 +13,9 @@ from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
 from PIL import Image
 from pydantic import BaseModel, Field
 from telegram import Bot, Message
+from google.cloud.pubsub_v1 import SubscriberClient
 
-from memebot.config import MODEL_NAME, get_token
+from memebot.config import MODEL_NAME, get_explainer_config, get_token
 from memebot.retrievers import GermanNewsRetriever
 
 logger = logging.getLogger(__name__)
@@ -134,6 +135,21 @@ class Explainer:
         self.n_generations_limit = 10
         self.n_hour_limit = 24
         dspy.configure(lm=lm)
+
+    def start_pulling(self) -> None:
+        self.__subscriber = SubscriberClient()
+        self.__subscriber_future = self.__subscriber.subscribe(
+            subscription=get_explainer_config().subscription,
+            callback=self.pull_message,
+        )
+
+    def stop_pulling(self) -> None:
+        self.__subscriber_future.cancel()
+        try:
+            self.__subscriber_future.result()
+        except Exception:
+            ...
+        self.__subscriber.close()
 
     async def _explain(self, caption: str, image: Image.Image) -> MemeInfoModel:
         search_query_extractor = dspy.Predict(SearchQuerySignature)
@@ -268,7 +284,6 @@ class Explainer:
             pubsub_msg.nack()
 
 
-@cache
 def get_explainer() -> Explainer:
     vertexai.init()
     lm = dspy.LM(
