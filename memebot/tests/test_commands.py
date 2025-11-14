@@ -125,6 +125,7 @@ class TestExplainCommand:
         assert bot_mock.send_message.call_count == 1
 
     @pytest.mark.xdist_group("pubsub")
+    @pytest.mark.emulation
     @pytest.mark.asyncio
     async def test_explain_put(self, mocker: MockerFixture, message: Message, pubsub: Process) -> None:
         # requires Pub/Sub emulator
