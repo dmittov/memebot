@@ -1,14 +1,13 @@
-from asyncio.subprocess import Process
 import datetime
 import json
+from asyncio.subprocess import Process
 
 import dspy
 import pytest
+from google.cloud.pubsub_v1 import PublisherClient, SubscriberClient
 from PIL import Image
 from pytest_mock import MockerFixture
 from telegram import Bot, Chat, Message, PhotoSize
-from google.cloud.pubsub_v1 import PublisherClient
-from google.cloud.pubsub_v1 import SubscriberClient
 
 import memebot.commands as commands
 from memebot.config import get_channel_id, get_explainer_config
@@ -92,8 +91,9 @@ class TestExplainCommand:
         )
 
         publisher_mock = mocker.MagicMock(spec=PublisherClient)
-        _ = mocker.patch("memebot.commands.PublisherClient", return_value=publisher_mock)
-
+        _ = mocker.patch(
+            "memebot.commands.PublisherClient", return_value=publisher_mock
+        )
 
         command = commands.ExplainCommand(explain_message)
         await command.run()
@@ -102,7 +102,9 @@ class TestExplainCommand:
     @pytest.mark.xdist_group("pubsub")
     @pytest.mark.emulation
     @pytest.mark.asyncio
-    async def test_explain_put(self, mocker: MockerFixture, explain_message: Message, pubsub: Process) -> None:
+    async def test_explain_put(
+        self, mocker: MockerFixture, explain_message: Message, pubsub: Process
+    ) -> None:
         # requires Pub/Sub emulator
         _ = pubsub
         bot_mock = mocker.MagicMock(spec=Bot)
@@ -135,14 +137,14 @@ class TestExplainCommand:
         )
         subscriber = SubscriberClient()
         command = commands.ExplainCommand(explain_message)
-        
+
         # drain subscription
         # it should be empty
         while subscriber.pull(
             subscription=get_explainer_config().subscription,
             max_messages=100,
             return_immediately=True,
-            ):
+        ):
             ...
 
         await command.run()
@@ -156,4 +158,4 @@ class TestExplainCommand:
         pubsub_msg = response.received_messages[0].message
         data = json.loads(pubsub_msg.data.decode("utf-8"))
         restored_message = Message.de_json(data=data, bot=None)
-        assert restored_message.text == explain_message.text        
+        assert restored_message.text == explain_message.text

@@ -1,16 +1,16 @@
+import queue
 from asyncio import sleep
 from asyncio.subprocess import Process
 from io import BytesIO
 
 import dspy
+import google.pubsub_v1.types as gapic_types
 import pytest
-import queue
-from pytest_mock import MockerFixture
+import vertexai
 from google.cloud.pubsub_v1 import PublisherClient, SubscriberClient
 from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
-import google.pubsub_v1.types as gapic_types
-import vertexai
 from PIL import Image
+from pytest_mock import MockerFixture
 from telegram import Bot, Message
 
 from memebot.config import get_explainer_config, get_token
@@ -51,7 +51,9 @@ class TestExplainer:
     @pytest.mark.xdist_group("pubsub")
     @pytest.mark.emulation
     @pytest.mark.asyncio
-    async def test_pulling(self, mocker: MockerFixture, explain_message: Message, pubsub: Process) -> None:
+    async def test_pulling(
+        self, mocker: MockerFixture, explain_message: Message, pubsub: Process
+    ) -> None:
         _ = pubsub
         lm = mocker.MagicMock(spec=dspy.LM)
         explainer = Explainer(lm=lm)
@@ -65,9 +67,9 @@ class TestExplainer:
             subscription=get_explainer_config().subscription,
             max_messages=100,
             return_immediately=True,
-            ):
+        ):
             ...
-        
+
         # now publish a message
         publisher = PublisherClient()
         publish_future = publisher.publish(
@@ -86,11 +88,13 @@ class TestExplainer:
         assert mock_pull_message.call_count == 1
 
     @pytest.mark.asyncio
-    async def test_pull_message(self, mocker: MockerFixture, explain_message: Message) -> None:
+    async def test_pull_message(
+        self, mocker: MockerFixture, explain_message: Message
+    ) -> None:
         lm = mocker.MagicMock(spec=dspy.LM)
         explainer = Explainer(lm=lm)
         mock_explain = mocker.patch("memebot.explainer.Explainer.explain")
-        
+
         _raw_proto_pubbsub_message = gapic_types.PubsubMessage.pb()
         msg_pb = _raw_proto_pubbsub_message(
             data=explain_message.to_json().encode("utf-8"),

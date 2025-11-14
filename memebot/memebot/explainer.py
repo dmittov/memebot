@@ -1,8 +1,8 @@
-from collections.abc import Generator
-from contextlib import contextmanager
 import json
 import logging
 import traceback
+from collections.abc import Generator
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from functools import cache, cached_property
 from io import BytesIO
@@ -11,11 +11,11 @@ import dspy
 import vertexai
 from google.cloud import firestore
 from google.cloud.firestore import FieldFilter
+from google.cloud.pubsub_v1 import SubscriberClient
 from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
 from PIL import Image
 from pydantic import BaseModel, Field
 from telegram import Bot, Message
-from google.cloud.pubsub_v1 import SubscriberClient
 
 from memebot.config import MODEL_NAME, get_explainer_config, get_token
 from memebot.retrievers import GermanNewsRetriever

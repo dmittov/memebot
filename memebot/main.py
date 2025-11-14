@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
 import logging
 import os
 import traceback
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from logging import getLogger
 
 from fastapi import FastAPI, Request, Response
-
 from telegram import Bot, Update
 
 from memebot import config

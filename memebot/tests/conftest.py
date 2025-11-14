@@ -1,19 +1,19 @@
 import asyncio
-from collections.abc import AsyncGenerator
 import contextlib
 import datetime
 import json
 import os
 import signal
 import socket
+from collections.abc import AsyncGenerator
 from typing import Generator
 
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
+from google.cloud.pubsub_v1 import PublisherClient, SubscriberClient
 from pytest_mock import MockerFixture
 from telegram import Chat, Message, PhotoSize
-from google.cloud.pubsub_v1 import PublisherClient, SubscriberClient
 
 from main import app
 from memebot.config import get_channel_id, get_explainer_config
@@ -38,40 +38,43 @@ def message() -> Generator[Message, None, None]:
     )
     yield message
 
+
 @pytest.fixture
 def explain_message(message: Message) -> Generator[Message, None, None]:
-        message = Message.de_json(data=json.loads(message.to_json()), bot=None)
-        message._unfreeze()
-        message.text = "/explain"
-        message.chat = Chat(
+    message = Message.de_json(data=json.loads(message.to_json()), bot=None)
+    message._unfreeze()
+    message.text = "/explain"
+    message.chat = Chat(
+        type="supergroup",
+        id=get_channel_id(),
+    )
+    message.reply_to_message = Message(
+        message_id=2,
+        date=datetime.datetime.now(datetime.timezone.utc),
+        sender_chat=Chat(id=get_channel_id(), type="channel"),
+        chat=Chat(
             type="supergroup",
             id=get_channel_id(),
-        )
-        message.reply_to_message = Message(
-            message_id=2,
-            date=datetime.datetime.now(datetime.timezone.utc),
-            sender_chat=Chat(id=get_channel_id(), type="channel"),
-            chat=Chat(
-                type="supergroup",
-                id=get_channel_id(),
-            ),
-            photo=[
-                PhotoSize(
-                    file_id="AgACAgIAAxkBAAPCaD_nTtiDmdw0A6l-iExxgpTY708AAibwMRtgXAABSnQ4QNG5CmZMAQADAgADeAADNgQ",
-                    file_unique_id="AQADJvAxG2BcAAFKfQ",
-                    file_size=87201,
-                    width=700,
-                    height=700,
-                )
-            ],
-            caption="Es ist Mittwoch, meine Kerle",
-        )
-        message._freeze()
-        return message    
+        ),
+        photo=[
+            PhotoSize(
+                file_id="AgACAgIAAxkBAAPCaD_nTtiDmdw0A6l-iExxgpTY708AAibwMRtgXAABSnQ4QNG5CmZMAQADAgADeAADNgQ",
+                file_unique_id="AQADJvAxG2BcAAFKfQ",
+                file_size=87201,
+                width=700,
+                height=700,
+            )
+        ],
+        caption="Es ist Mittwoch, meine Kerle",
+    )
+    message._freeze()
+    return message
 
 
 @pytest_asyncio.fixture(scope="session")
-async def pubsub(session_mocker: MockerFixture) -> AsyncGenerator[asyncio.subprocess.Process]:
+async def pubsub(
+    session_mocker: MockerFixture,
+) -> AsyncGenerator[asyncio.subprocess.Process]:
     # install emulator:
     # $ gcloud components install beta
     # $ gcloud components install pubsub-emulator
@@ -98,7 +101,9 @@ async def pubsub(session_mocker: MockerFixture) -> AsyncGenerator[asyncio.subpro
         start_time = asyncio.get_event_loop().time()
         while (asyncio.get_event_loop().time() - start_time) < timeout_sec:
             try:
-                with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+                with contextlib.closing(
+                    socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                ) as sock:
                     sock.settimeout(0.1)  # 100ms for socket is enough
                     if sock.connect_ex((host, port)) == 0:
                         return
@@ -123,8 +128,10 @@ async def pubsub(session_mocker: MockerFixture) -> AsyncGenerator[asyncio.subpro
 
     def create_subscription() -> None:
         subscriber = SubscriberClient()
-        subscriber.create_subscription(name=get_explainer_config().subscription, topic=get_explainer_config().topic)
-    
+        subscriber.create_subscription(
+            name=get_explainer_config().subscription, topic=get_explainer_config().topic
+        )
+
     try:
         wait_for_emulator()
         create_topic()
