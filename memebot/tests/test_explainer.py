@@ -54,7 +54,11 @@ class TestExplainer:
     @pytest.mark.pubsub
     @pytest.mark.asyncio
     async def test_pulling(
-        self, lm: dspy.LM, mocker: MockerFixture, explain_message: Message, pubsub: Process
+        self,
+        lm: dspy.LM,
+        mocker: MockerFixture,
+        explain_message: Message,
+        pubsub: Process,
     ) -> None:
         _ = pubsub
         _ = lm

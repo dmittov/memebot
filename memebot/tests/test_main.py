@@ -24,7 +24,9 @@ class TestWebhook:
         assert response.status_code == 200
         assert response.text == "ignored, no message"
 
-    def test_message_help(self, mocker: MockerFixture, client: TestClient, message: Message) -> None:
+    def test_message_help(
+        self, mocker: MockerFixture, client: TestClient, message: Message
+    ) -> None:
         message._unfreeze()
         message.text = "/help"
         message._freeze()

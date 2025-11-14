@@ -8,7 +8,7 @@ def clean_subscription(subscription: str) -> None:
         while subscriber.pull(
             subscription=subscription,
             max_messages=100,
-            timeout=0.1,  # make sure message doesn't appear in the next 100ms 
+            timeout=0.1,  # make sure message doesn't appear in the next 100ms
         ):
             ...
     except DeadlineExceeded:
