@@ -3,6 +3,7 @@ from asyncio.subprocess import Process
 
 import dspy
 import pytest
+from google.api_core.exceptions import DeadlineExceeded
 from google.cloud.pubsub_v1 import PublisherClient, SubscriberClient
 from PIL import Image
 from pytest_mock import MockerFixture
@@ -12,7 +13,6 @@ import memebot.commands as commands
 from memebot.config import get_explainer_config
 from memebot.explainer import Explainer
 from tests.helpers import clean_subscription
-from google.api_core.exceptions import DeadlineExceeded
 
 
 @pytest.mark.parametrize(

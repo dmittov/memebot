@@ -1,5 +1,5 @@
-from google.cloud.pubsub_v1 import SubscriberClient
 from google.api_core.exceptions import DeadlineExceeded
+from google.cloud.pubsub_v1 import SubscriberClient
 
 
 def clean_subscription(subscription: str) -> None:
