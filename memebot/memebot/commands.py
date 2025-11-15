@@ -112,6 +112,7 @@ class ExplainCommand(CommandInterface):
             str(self.message.message_id),
             publish_message_id,
         )
+        # TODO: get rid of debug message
         await Bot(token=get_token()).send_message(
             chat_id=self.message.chat.id,
             reply_to_message_id=self.message.id,

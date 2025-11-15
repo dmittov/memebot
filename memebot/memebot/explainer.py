@@ -132,8 +132,7 @@ class MemeInfoSignature(dspy.Signature):
 
 
 class Explainer:
-    # TODO: fix race condition
-    # TODO: check allows another request in 24hrs
+    # TODO: firestore
 
     def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
         self.n_generations_limit = 10
