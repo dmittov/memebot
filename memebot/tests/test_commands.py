@@ -1,3 +1,4 @@
+import asyncio
 import json
 from asyncio.subprocess import Process
 
@@ -80,7 +81,7 @@ class TestExplainCommand:
         # avoid calling vertexai.init()
         _ = mocker.patch(
             "memebot.commands.get_explainer",
-            return_value=Explainer(),
+            return_value=Explainer(loop=asyncio.get_running_loop()),
         )
         mock_get_image = mocker.patch("memebot.explainer.Explainer.get_image")
         mock_news_retriver = mocker.patch(
@@ -125,7 +126,7 @@ class TestExplainCommand:
         # avoid calling vertexai.init()
         _ = mocker.patch(
             "memebot.commands.get_explainer",
-            return_value=Explainer(),
+            return_value=Explainer(loop=asyncio.get_running_loop()),
         )
         mock_get_image = mocker.patch("memebot.explainer.Explainer.get_image")
         mock_news_retriver = mocker.patch(

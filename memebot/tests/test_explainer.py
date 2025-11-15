@@ -1,3 +1,4 @@
+import asyncio
 import queue
 from asyncio import sleep
 from asyncio.subprocess import Process
@@ -44,7 +45,7 @@ class TestExplainer:
             max_tokens=16384,
         )
         dspy.configure(lm=lm)
-        explainer = Explainer()
+        explainer = Explainer(loop=asyncio.get_running_loop())
         result = await explainer._explain(
             caption="Лицо на фото: Julia Ruhs", image=image
         )
@@ -62,7 +63,7 @@ class TestExplainer:
     ) -> None:
         _ = pubsub
         _ = lm
-        explainer = Explainer()
+        explainer = Explainer(loop=asyncio.get_running_loop())
         mock_pull_message = mocker.patch("memebot.explainer.Explainer.pull_message")
 
         clean_subscription(get_explainer_config().subscription)
@@ -88,7 +89,7 @@ class TestExplainer:
     async def test_pull_message(
         self, mocker: MockerFixture, explain_message: Message
     ) -> None:
-        explainer = Explainer()
+        explainer = Explainer(loop=asyncio.get_running_loop())
         mock_explain = mocker.patch("memebot.explainer.Explainer.explain")
 
         _raw_proto_pubbsub_message = gapic_types.PubsubMessage.pb()
@@ -106,5 +107,5 @@ class TestExplainer:
             delivery_attempt=0,
             request_queue=queue.Queue(),
         )
-        await explainer.pull_message(pubsub_message)
+        explainer.pull_message(pubsub_message)
         assert mock_explain.call_count == 1

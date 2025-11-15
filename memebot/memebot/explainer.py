@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import traceback
@@ -12,6 +13,7 @@ import vertexai
 from google.cloud import firestore
 from google.cloud.firestore import FieldFilter
 from google.cloud.pubsub_v1 import SubscriberClient
+from google.cloud.pubsub_v1.subscriber.exceptions import AcknowledgeError
 from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
 from PIL import Image
 from pydantic import BaseModel, Field
@@ -133,9 +135,10 @@ class Explainer:
     # TODO: fix race condition
     # TODO: check allows another request in 24hrs
 
-    def __init__(self) -> None:
+    def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
         self.n_generations_limit = 10
         self.n_hour_limit = 24
+        self.__loop = loop
 
     @contextmanager
     def subscription(self) -> Generator[None, None, None]:
@@ -273,20 +276,27 @@ class Explainer:
         )
         self.__register(message=message)
 
-    async def pull_message(self, pubsub_msg: PubSubMessage) -> None:
+    def pull_message(self, pubsub_msg: PubSubMessage) -> None:
         try:
             logger.info("Fetching explain message")
             data = json.loads(pubsub_msg.data.decode("utf-8"))
             message = Message.de_json(data=data, bot=None)
-            await self.explain(message)
-            pubsub_msg.ack()
+            asyncio.run_coroutine_threadsafe(
+                coro=self.explain(message),
+                loop=self.__loop,
+            )
+            ack_future = pubsub_msg.ack_with_response()
+            try:
+                ack_future.result(timeout=10.0)
+            except AcknowledgeError:
+                logger.error("Acknoledgement failed for msg: %d", message.message_id)
         except Exception as exc:
             tb = traceback.format_exc()
             logger.error("%s\n%s", str(exc), tb)
             pubsub_msg.nack()
 
 
-def get_explainer() -> Explainer:
+def get_explainer(loop: asyncio.AbstractEventLoop) -> Explainer:
     vertexai.init()
     lm = dspy.LM(
         MODEL_NAME,
@@ -294,4 +304,4 @@ def get_explainer() -> Explainer:
         max_tokens=16384,
     )
     dspy.configure(lm=lm)
-    return Explainer()
+    return Explainer(loop=loop)

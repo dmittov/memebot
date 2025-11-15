@@ -52,10 +52,6 @@ class ForwardCommand(CommandInterface):
 
 class ExplainCommand(CommandInterface):
 
-    @property
-    def explainer(self) -> Explainer:
-        return get_explainer()
-
     async def validate(self, message: Message) -> bool:
         """Check the message is sent in a super-group
         and there is a picture to explain"""
