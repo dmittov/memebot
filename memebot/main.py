@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import traceback
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from logging import getLogger
@@ -10,14 +12,15 @@ from logging import getLogger
 from fastapi import FastAPI, Request, Response
 from telegram import Bot, Update
 
+from memebot import config
 from memebot.commands import CommandInterface, build_command
 from memebot.config import get_token
+from memebot.explainer import get_explainer
 
 logger = getLogger(__name__)
 
 
-@asynccontextmanager
-async def lifespan(_: FastAPI):
+async def set_webhook() -> None:
     """Sets the webhook for the Telegram Bot and manages its lifecycle (start/stop)."""
     if webhook_url := os.getenv("WEBHOOK_URL"):
         # https://core.telegram.org/bots/api#setwebhook
@@ -61,9 +64,13 @@ async def lifespan(_: FastAPI):
         except Exception:  # noqa: BLE001
             logging.exception("Could not set webhook")
 
-        yield
 
-        ...
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+    await set_webhook()
+    app.state.explainer = get_explainer(loop=asyncio.get_running_loop())
+    with app.state.explainer.subscription():
+        yield
 
 
 app = FastAPI(lifespan=lifespan)

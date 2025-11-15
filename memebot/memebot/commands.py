@@ -1,11 +1,13 @@
 import abc
+from functools import cached_property
 from logging import getLogger
 from typing import final, override
 
+from google.cloud.pubsub_v1 import PublisherClient
 from telegram import Bot, Message
 
 from memebot.censor import DefaultCensor
-from memebot.config import get_channel_id, get_token
+from memebot.config import get_channel_id, get_explainer_config, get_token
 from memebot.explainer import Explainer, get_explainer
 
 logger = getLogger(__name__)
@@ -50,22 +52,9 @@ class ForwardCommand(CommandInterface):
 
 class ExplainCommand(CommandInterface):
 
-    @property
-    def explainer(self) -> Explainer:
-        return get_explainer()
-
     async def validate(self, message: Message) -> bool:
         """Check the message is sent in a super-group
         and there is a picture to explain"""
-        # if the message is missing required attributes, it's ignored
-        # if (
-        #     (message.chat.type != "supergroup")
-        #     or (message.reply_to_message.sender_chat.id != get_channel_id())
-        # ):
-        #     await get_bot().send_message(
-        #         chat_id=message.chat.id, text="Explain works just in channel chats"
-        #     )
-        #     return False
         logger.info(message)
         if message.chat.type != "supergroup":
             await Bot(token=get_token()).send_message(
@@ -96,13 +85,39 @@ class ExplainCommand(CommandInterface):
                 text="Can comment just photos for yet, no photo found.",
             )
             return False
-        logger.info("Try to perform explain")
+        logger.info("Message is valid for explain")
         return True
+
+    @cached_property
+    def publisher(self) -> PublisherClient:
+        return PublisherClient()
+
+    @cached_property
+    def topic(self) -> str:
+        return get_explainer_config().topic
 
     @override
     async def run(self) -> None:
-        if await self.validate(self.message):
-            await self.explainer.explain(self.message)
+        if not (await self.validate(self.message)):
+            return
+        publish_future = self.publisher.publish(
+            topic=self.topic,
+            data=self.message.to_json().encode("utf-8"),
+            message_id=str(self.message.message_id),
+            chat_id=str(self.message.chat.id),
+        )
+        publish_message_id: str = publish_future.result()
+        logger.info(
+            "Published explain request [msg: %s]: %s",
+            str(self.message.message_id),
+            publish_message_id,
+        )
+        # TODO: get rid of debug message
+        await Bot(token=get_token()).send_message(
+            chat_id=self.message.chat.id,
+            reply_to_message_id=self.message.id,
+            text=f"Debug message: Published explain request [msg: {self.message.message_id}]: {publish_message_id}",
+        )
 
 
 COMMAND_REGISTRY: dict[str, type[CommandInterface]] = {

@@ -1,5 +1,6 @@
 import logging
 import os
+from dataclasses import dataclass
 from functools import cache
 
 import google.cloud.secretmanager as sm
@@ -43,6 +44,23 @@ def get_channel_id() -> int:
 @cache
 def get_chat_id() -> int:
     return int(os.getenv("CHAT_ID", "1"))
+
+
+@dataclass
+class ExplainerConfig:
+    topic: str
+    subscription: str
+
+
+@cache
+def get_explainer_config() -> ExplainerConfig:
+    return ExplainerConfig(
+        topic=os.getenv("EXPLAIN_TOPIC", "projects/test-project/topics/explain"),
+        subscription=os.getenv(
+            "EXPLAIN_SUBSCRIPTION",
+            "projects/test-project/subscriptions/sub-explain-pull",
+        ),
+    )
 
 
 ADMINS = {int(uid) for uid in os.getenv("ADMIN_IDS", "").split(",") if uid.strip()}

@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
-from telegram import Message, Update
+from pytest_mock import MockerFixture
+from telegram import Bot, Message, Update
 
 
 class TestMain:
@@ -23,10 +24,19 @@ class TestWebhook:
         assert response.status_code == 200
         assert response.text == "ignored, no message"
 
-    def test_message_help(self, client: TestClient, message: Message) -> None:
+    def test_message_help(
+        self, mocker: MockerFixture, client: TestClient, message: Message
+    ) -> None:
         message._unfreeze()
         message.text = "/help"
         message._freeze()
+
+        bot_mock = mocker.MagicMock(spec=Bot)
+        _ = mocker.patch(
+            "memebot.commands.Bot",
+            return_value=bot_mock,
+        )
+
         update = Update(update_id=1, message=message)
         response = client.post(self.link, json=update.to_dict())
         assert response.status_code == 200

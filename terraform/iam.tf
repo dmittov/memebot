@@ -11,9 +11,6 @@ resource "google_project_iam_custom_role" "memebot_role" {
     "datastore.entities.create",
     "datastore.entities.update",
     "datastore.entities.delete",
-
-    "pubsub.topics.publish",
-
     "cloudtasks.tasks.create",
   ]
 }
@@ -69,4 +66,16 @@ resource "google_project_iam_member" "sa_serviceusage_consumer" {
   project = data.google_client_config.default.project
   role    = "roles/serviceusage.serviceUsageConsumer"
   member  = "serviceAccount:${data.google_client_config.default.project}@appspot.gserviceaccount.com"
+}
+
+resource "google_pubsub_topic_iam_member" "publisher" {
+  topic = google_pubsub_topic.topic_explain.name
+  role  = "roles/pubsub.publisher"
+  member = "serviceAccount:${data.google_client_config.default.project}@appspot.gserviceaccount.com"
+}
+
+resource "google_pubsub_subscription_iam_member" "subscriber" {
+  subscription = google_pubsub_subscription.sub_explain.name
+  role         = "roles/pubsub.subscriber"
+  member       = "serviceAccount:${data.google_client_config.default.project}@appspot.gserviceaccount.com"
 }

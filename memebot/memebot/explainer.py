@@ -1,4 +1,9 @@
+import asyncio
+import json
 import logging
+import traceback
+from collections.abc import Generator
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from functools import cache, cached_property
 from io import BytesIO
@@ -7,11 +12,14 @@ import dspy
 import vertexai
 from google.cloud import firestore
 from google.cloud.firestore import FieldFilter
+from google.cloud.pubsub_v1 import SubscriberClient
+from google.cloud.pubsub_v1.subscriber.exceptions import AcknowledgeError
+from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
 from PIL import Image
 from pydantic import BaseModel, Field
 from telegram import Bot, Message
 
-from memebot.config import MODEL_NAME, get_token
+from memebot.config import MODEL_NAME, get_explainer_config, get_token
 from memebot.retrievers import GermanNewsRetriever
 
 logger = logging.getLogger(__name__)
@@ -124,13 +132,27 @@ class MemeInfoSignature(dspy.Signature):
 
 
 class Explainer:
-    # TODO: fix race condition
-    # TODO: check allows another request in 24hrs
+    # TODO: firestore
 
-    def __init__(self, lm: dspy.LM) -> None:
+    def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
         self.n_generations_limit = 10
         self.n_hour_limit = 24
-        dspy.configure(lm=lm)
+        self.__loop = loop
+
+    @contextmanager
+    def subscription(self) -> Generator[None, None, None]:
+        self.__subscriber = SubscriberClient()
+        self.__subscriber_future = self.__subscriber.subscribe(
+            subscription=get_explainer_config().subscription,
+            callback=self.pull_message,
+        )
+        yield
+        self.__subscriber_future.cancel()
+        try:
+            self.__subscriber_future.result()
+        except Exception:
+            ...
+        self.__subscriber.close()
 
     async def _explain(self, caption: str, image: Image.Image) -> MemeInfoModel:
         search_query_extractor = dspy.Predict(SearchQuerySignature)
@@ -212,11 +234,7 @@ class Explainer:
         buffer = BytesIO()
         await hfile.download_to_memory(out=buffer)
         logger.info("Image downloaded: %d bytes", buffer.tell())
-        logger.info("Image downloaded: %d bytes", buffer.tell())
         buffer.seek(0)
-        image = Image.open(buffer)
-        logger.info("Image resolution: %s", repr(image.size))
-        return image
         image = Image.open(buffer)
         logger.info("Image resolution: %s", repr(image.size))
         return image
@@ -257,13 +275,32 @@ class Explainer:
         )
         self.__register(message=message)
 
+    def pull_message(self, pubsub_msg: PubSubMessage) -> None:
+        try:
+            logger.info("Fetching explain message")
+            data = json.loads(pubsub_msg.data.decode("utf-8"))
+            message = Message.de_json(data=data, bot=None)
+            asyncio.run_coroutine_threadsafe(
+                coro=self.explain(message),
+                loop=self.__loop,
+            )
+            ack_future = pubsub_msg.ack_with_response()
+            try:
+                ack_future.result(timeout=10.0)
+            except AcknowledgeError:
+                logger.error("Acknoledgement failed for msg: %d", message.message_id)
+        except Exception as exc:
+            tb = traceback.format_exc()
+            logger.error("%s\n%s", str(exc), tb)
+            pubsub_msg.nack()
 
-@cache
-def get_explainer() -> Explainer:
+
+def get_explainer(loop: asyncio.AbstractEventLoop) -> Explainer:
     vertexai.init()
     lm = dspy.LM(
         MODEL_NAME,
         temperature=0.0,
         max_tokens=16384,
     )
-    return Explainer(lm=lm)
+    dspy.configure(lm=lm)
+    return Explainer(loop=loop)

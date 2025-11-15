@@ -8,6 +8,7 @@ resource "google_project_service" "required_apis" {
     "firestore.googleapis.com",
     "aiplatform.googleapis.com",
     "customsearch.googleapis.com",
+    "pubsub.googleapis.com",
   ])
   project                    = data.google_client_config.default.project
   service                    = each.key
