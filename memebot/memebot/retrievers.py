@@ -2,6 +2,7 @@ import asyncio
 from collections.abc import Coroutine
 from datetime import timedelta
 from typing import Any
+from markdownify import markdownify
 
 import httpx
 
@@ -34,9 +35,10 @@ class GermanNewsRetriever:
             return []
         results = response.json()
         coroutines = []
-        for result in results["items"][:k]:
-            link = result["link"]
-            coroutines.append(client.get(link))
+        if int(results["searchInformation"]["totalResults"]) > 0:
+            for result in results["items"][:k]:
+                link = result["link"]
+                coroutines.append(client.get(link))
         return coroutines
 
     async def search(self, query: str, k: int | None = None) -> list[str]:
@@ -49,7 +51,8 @@ class GermanNewsRetriever:
             )
             for coroutine in asyncio.as_completed(coroutines):
                 try:
-                    document = (await coroutine).text
+                    html_document = (await coroutine).text
+                    document = markdownify(html_document)
                     documents.append(document)
                 except httpx.TimeoutException:
                     ...
