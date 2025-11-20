@@ -32,6 +32,9 @@ class TestGermanNewsRetriever:
             httpx.Response(
                 status_code=200,
                 json={
+                    "searchInformation": {
+                        "totalResults": "3",
+                    },
                     "items": [
                         {"link": "https://bild.de/article1"},
                         {"link": "https://bild.de/article2"},
@@ -56,6 +59,28 @@ class TestGermanNewsRetriever:
         results = await retriver.search(query="Ralph Schumacher")
         assert len(results) == k
 
+    async def test_get_empty_news(self, mocker: MockerFixture) -> None:
+        k: int = 3
+        client = mocker.patch("memebot.retrievers.httpx.AsyncClient").return_value
+
+        client.__aenter__ = mocker.AsyncMock(return_value=client)
+        client.__aexit__ = mocker.AsyncMock(return_value=None)
+
+        client.get = mocker.AsyncMock()
+        client.get.side_effect = [
+            httpx.Response(
+                status_code=200,
+                json={
+                    "searchInformation": {
+                        "totalResults": "0",
+                    },
+                },
+            ),
+        ]
+        retriver = GermanNewsRetriever(k=k)
+        results = await retriver.search(query="Ralph Schumacher")
+        assert len(results) == 0      
+
     async def test_get_news_timeout(self, mocker: MockerFixture) -> None:
         k: int = 3
         client = mocker.patch("memebot.retrievers.httpx.AsyncClient").return_value
@@ -68,6 +93,9 @@ class TestGermanNewsRetriever:
                 httpx.Response(
                     status_code=200,
                     json={
+                        "searchInformation": {
+                            "totalResults": "3",
+                        },
                         "items": [
                             {"link": "https://bild.de/article1"},
                             {"link": "https://bild.de/article2"},
@@ -116,6 +144,9 @@ class TestGermanNewsRetriever:
                 httpx.Response(
                     status_code=200,
                     json={
+                        "searchInformation": {
+                            "totalResults": "3",
+                        },
                         "items": [
                             {"link": "https://bild.de/article1"},
                             {"link": "https://bild.de/article2"},
