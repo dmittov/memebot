@@ -39,7 +39,7 @@ class TestGermanNewsRetriever:
                         {"link": "https://bild.de/article1"},
                         {"link": "https://bild.de/article2"},
                         {"link": "https://bild.de/article3"},
-                    ]
+                    ],
                 },
             ),
             httpx.Response(
@@ -79,7 +79,7 @@ class TestGermanNewsRetriever:
         ]
         retriver = GermanNewsRetriever(k=k)
         results = await retriver.search(query="Ralph Schumacher")
-        assert len(results) == 0      
+        assert len(results) == 0
 
     async def test_get_news_timeout(self, mocker: MockerFixture) -> None:
         k: int = 3
@@ -100,7 +100,7 @@ class TestGermanNewsRetriever:
                             {"link": "https://bild.de/article1"},
                             {"link": "https://bild.de/article2"},
                             {"link": "https://bild.de/article3"},
-                        ]
+                        ],
                     },
                 ),
                 httpx.Response(
@@ -151,7 +151,7 @@ class TestGermanNewsRetriever:
                             {"link": "https://bild.de/article1"},
                             {"link": "https://bild.de/article2"},
                             {"link": "https://bild.de/article3"},
-                        ]
+                        ],
                     },
                 ),
                 httpx.Response(
