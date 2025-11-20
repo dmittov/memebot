@@ -2,9 +2,9 @@ import asyncio
 from collections.abc import Coroutine
 from datetime import timedelta
 from typing import Any
-from markdownify import markdownify
 
 import httpx
+from markdownify import markdownify
 
 from memebot.config import get_german_news_cx_key, get_search_api_key
 

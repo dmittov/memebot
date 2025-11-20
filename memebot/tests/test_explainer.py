@@ -51,8 +51,7 @@ class TestExplainer:
         dspy.configure(lm=lm)
         explainer = Explainer(loop=asyncio.get_running_loop())
         result = await explainer._explain(
-            caption="Woman on the photo is Julia Ruhs",
-            image=image
+            caption="Woman on the photo is Julia Ruhs", image=image
         )
         assert result.explanation is not None
 
