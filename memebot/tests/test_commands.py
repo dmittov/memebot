@@ -78,11 +78,6 @@ class TestExplainCommand:
             "memebot.explainer.dspy.Predict",
             return_value=model_mock,
         )
-        # avoid calling vertexai.init()
-        _ = mocker.patch(
-            "memebot.commands.get_explainer",
-            return_value=Explainer(loop=asyncio.get_running_loop()),
-        )
         mock_get_image = mocker.patch("memebot.explainer.Explainer.get_image")
         mock_news_retriver = mocker.patch(
             "memebot.explainer.GermanNewsRetriever"
@@ -122,11 +117,6 @@ class TestExplainCommand:
         _ = mocker.patch(
             "memebot.explainer.dspy.Predict",
             return_value=model_mock,
-        )
-        # avoid calling vertexai.init()
-        _ = mocker.patch(
-            "memebot.commands.get_explainer",
-            return_value=Explainer(loop=asyncio.get_running_loop()),
         )
         mock_get_image = mocker.patch("memebot.explainer.Explainer.get_image")
         mock_news_retriver = mocker.patch(
