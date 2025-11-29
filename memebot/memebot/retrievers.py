@@ -9,7 +9,7 @@ from markdownify import markdownify
 from memebot.config import get_search_cx_key, get_search_api_key
 
 
-class GermanNewsRetriever:
+class GoogleSearch:
 
     def __init__(self, **kwargs: Any) -> None:
         self.__search_api_key = get_search_api_key()
@@ -41,13 +41,13 @@ class GermanNewsRetriever:
                 coroutines.append(client.get(link))
         return coroutines
 
-    async def search(self, query: str, k: int | None = None) -> list[str]:
+    async def search(self, query: str) -> str:
         documents = []
         async with httpx.AsyncClient(
             follow_redirects=True, timeout=self.timeout
         ) as client:
             coroutines = await self._search(
-                client=client, query=query, k=k if k else self.k
+                client=client, query=query, k=self.k
             )
             for coroutine in asyncio.as_completed(coroutines):
                 try:
@@ -56,4 +56,4 @@ class GermanNewsRetriever:
                     documents.append(document)
                 except httpx.TimeoutException:
                     ...
-        return documents
+        return "".join(f"Document:\n{document}\n\n" for document in documents)
