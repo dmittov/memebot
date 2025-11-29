@@ -6,14 +6,14 @@ from typing import Any
 import httpx
 from markdownify import markdownify
 
-from memebot.config import get_german_news_cx_key, get_search_api_key
+from memebot.config import get_search_cx_key, get_search_api_key
 
 
 class GermanNewsRetriever:
 
     def __init__(self, **kwargs: Any) -> None:
         self.__search_api_key = get_search_api_key()
-        self.__get_german_news_cx_key = get_german_news_cx_key()
+        self.__search_cx_key = get_search_cx_key()
         self.__base_url = "https://www.googleapis.com/customsearch/v1"
         self.k: int = kwargs.get("k", 3)
         timeout: timedelta = kwargs.get("timeout", timedelta(seconds=30))
@@ -24,7 +24,7 @@ class GermanNewsRetriever:
     ) -> list[Coroutine[Any, Any, httpx.Response]]:
         params = dict(
             q=query,
-            cx=self.__get_german_news_cx_key,
+            cx=self.__search_cx_key,
             key=self.__search_api_key,
         )
         try:

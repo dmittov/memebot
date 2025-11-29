@@ -27,8 +27,8 @@ def get_token() -> str:
 
 
 @cache
-def get_german_news_cx_key() -> str:
-    return retrieve_secret("GERMAN_NEWS_CX_KEY")
+def get_search_cx_key() -> str:
+    return retrieve_secret("SEARCH_CX_KEY")
 
 
 @cache

@@ -71,7 +71,7 @@ class SearchQuerySignature(dspy.Signature):
 class MemeInfoModel(BaseModel):
     lang: str = Field(
         description=(
-            "Give the ISO 2-letter code for the majority of the text " "on the picture"
+            "Give the ISO 2-letter code for the majority of the text on the picture"
         )
     )
     has_person: bool = Field(
@@ -155,6 +155,8 @@ class Explainer:
         self.__subscriber.close()
 
     async def _explain(self, caption: str, image: Image.Image) -> MemeInfoModel:
+        # react = dspy.ReAct(MemeInfoSignature)
+
         search_query_extractor = dspy.Predict(SearchQuerySignature)
         meme_info_extractor = dspy.Predict(MemeInfoSignature)
 
@@ -251,18 +253,28 @@ class Explainer:
             else message.reply_to_message.caption
         )
         meme_info = await self._explain(caption=caption, image=image)
-        explanation = (
-            "### Анализ мема:"
-            "\n"
-            f"{meme_info.explanation}"
+        part_translate = (
             "\n\n"
             "### Перевод:"
             "\n"
             f"{meme_info.ru_translation}"
+            if meme_info.lang.upper() != "RU"
+            else ""
+        )
+        part_grammar = (
             "\n\n"
             "### Грамматика:"
             "\n"
             f"{meme_info.grammar_explanation}"
+            if meme_info.lang.upper() == "DE"
+            else ""
+        )
+        explanation = (
+            "### Анализ мема:"
+            "\n"
+            f"{meme_info.explanation}"
+            f"{part_translate}"
+            f"{part_grammar}"
             "\n\n"
             "### Оценка:"
             "\n"
