@@ -50,9 +50,7 @@ class TestExplainer:
         )
         dspy.configure(lm=lm)
         explainer = Explainer(loop=asyncio.get_running_loop())
-        result = await explainer._explain(
-            caption="", image=image
-        )
+        result = await explainer._explain(caption="", image=image)
         assert result.explanation is not None
 
     # No GCP auth in testing env
@@ -68,10 +66,8 @@ class TestExplainer:
         )
         dspy.configure(lm=lm)
         explainer = Explainer(loop=asyncio.get_running_loop())
-        result = await explainer._explain(
-            caption="", image=image
-        )
-        assert result.explanation is not None        
+        result = await explainer._explain(caption="", image=image)
+        assert result.explanation is not None
 
     # No GCP auth in testing env
     @pytest.mark.skip

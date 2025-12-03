@@ -6,7 +6,7 @@ import httpx
 import pytest
 from pytest_mock import MockerFixture
 
-from memebot.retrievers import GermanNewsRetriever
+from memebot.retrievers.german_news_retriever import GermanNewsRetriever
 
 
 @pytest.mark.asyncio

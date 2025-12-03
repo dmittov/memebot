@@ -80,7 +80,7 @@ class MemeInfoModel(BaseModel):
 
 class MemeInfoSignature(dspy.Signature):
     """Your task is to analyse a meme. Perform reasoning in English. Your response must be in Russian.
-    
+
     Before choosing `next_tool_name = "finish"`, you MUST run a short internal checklist in `next_thought`:
     - Extract and list all:
         * names of real people, nicknames/handles, organizations, political parties, brands;

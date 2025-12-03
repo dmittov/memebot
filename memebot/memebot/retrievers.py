@@ -49,9 +49,7 @@ class GoogleSearch:
         async with httpx.AsyncClient(
             follow_redirects=True, timeout=self.timeout
         ) as client:
-            coroutines = await self._search(
-                client=client, query=query, k=k
-            )
+            coroutines = await self._search(client=client, query=query, k=k)
             for coroutine in asyncio.as_completed(coroutines):
                 try:
                     html_document = (await coroutine).text
