@@ -61,7 +61,7 @@ class TestExplainCommand:
         self, mocker: MockerFixture, explain_message: Message
     ) -> None:
         command = commands.ExplainCommand(explain_message)
-        command.validate = mocker.AsyncMock(return_value=True)
+        mocker.patch.object(command, "validate", mocker.AsyncMock(return_value=True))
         command.publisher = mocker.MagicMock(spec=PublisherClient)
         future = mocker.AsyncMock(spec=PublisherFuture)
         command.publisher.publish = mocker.MagicMock(return_value=future)
@@ -78,7 +78,7 @@ class TestExplainCommand:
         clean_subscription(get_explainer_config().subscription)
 
         command = commands.ExplainCommand(explain_message)
-        command.validate = mocker.AsyncMock(return_value=True)
+        mocker.patch.object(command, "validate", mocker.AsyncMock(return_value=True))
         await command.run()
 
         subscriber = SubscriberClient()
