@@ -41,13 +41,15 @@ class GoogleSearch:
                 coroutines.append(client.get(link))
         return coroutines
 
-    async def search(self, query: str) -> str:
+    async def search(self, query: str, k: int | None = None) -> str:
+        if k is None:
+            k = self.k
         documents = []
         async with httpx.AsyncClient(
             follow_redirects=True, timeout=self.timeout
         ) as client:
             coroutines = await self._search(
-                client=client, query=query, k=self.k
+                client=client, query=query, k=k
             )
             for coroutine in asyncio.as_completed(coroutines):
                 try:
