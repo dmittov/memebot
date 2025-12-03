@@ -6,7 +6,7 @@ from typing import Any
 import httpx
 from markdownify import markdownify
 
-from memebot.config import get_search_cx_key, get_search_api_key
+from memebot.config import get_search_api_key, get_search_cx_key
 
 
 class GoogleSearch:
