@@ -6,7 +6,7 @@ import httpx
 import pytest
 from pytest_mock import MockerFixture
 
-from memebot.retrievers import GermanNewsRetriever
+from memebot.retrievers import GoogleSearch
 
 
 @pytest.mark.asyncio
@@ -16,9 +16,11 @@ class TestGermanNewsRetriever:
     @pytest.mark.skip
     async def test_get_real_news(self) -> None:
         k: int = 3
-        retriver = GermanNewsRetriever(k=k)
+        retriver = GoogleSearch(k=k)
         results = await retriver.search(query="Ralph Schumacher")
-        assert len(results) == k
+        # test search performed
+        # Search returns a single document
+        assert len(results) > 0
 
     async def test_get_mock_news(self, mocker: MockerFixture) -> None:
         k: int = 3
@@ -55,9 +57,9 @@ class TestGermanNewsRetriever:
                 text="Text 3",
             ),
         ]
-        retriver = GermanNewsRetriever(k=k)
+        retriver = GoogleSearch(k=k)
         results = await retriver.search(query="Ralph Schumacher")
-        assert len(results) == k
+        assert results.count("Document:\n") == 3
 
     async def test_get_empty_news(self, mocker: MockerFixture) -> None:
         k: int = 3
@@ -77,7 +79,7 @@ class TestGermanNewsRetriever:
                 },
             ),
         ]
-        retriver = GermanNewsRetriever(k=k)
+        retriver = GoogleSearch(k=k)
         results = await retriver.search(query="Ralph Schumacher")
         assert len(results) == 0
 
@@ -128,9 +130,9 @@ class TestGermanNewsRetriever:
 
         client.get = mocker.AsyncMock()
         client.get.side_effect = _get
-        retriver = GermanNewsRetriever(k=k)
+        retriver = GoogleSearch(k=k)
         results = await retriver.search(query="Ralph Schumacher")
-        assert len(results) == k - 1
+        assert results.count("Document:\n") == k - 1
 
     async def test_get_news_delay(self, mocker: MockerFixture) -> None:
         k: int = 3
@@ -179,6 +181,6 @@ class TestGermanNewsRetriever:
 
         client.get = mocker.AsyncMock()
         client.get.side_effect = _get
-        retriver = GermanNewsRetriever(k=k)
+        retriver = GoogleSearch(k=k)
         results = await retriver.search(query="Ralph Schumacher")
-        assert results[-1] == "Text 2"
+        assert results.split("Document:\n")[-1].strip() == "Text 2"

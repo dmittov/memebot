@@ -12,7 +12,7 @@ env_variables:
   ADMIN_IDS: "75291100"  # @mittov
   WEBHOOK_URL: "https://memebot-459222.ey.r.appspot.com/webhook"
   TELEGRAM_TOKEN: projects/719240642737/secrets/telegram_token/versions/latest
-  GERMAN_NEWS_CX_KEY: projects/719240642737/secrets/german_news_cx_key/versions/latest
+  SEARCH_CX_KEY: projects/719240642737/secrets/global_search_cx_key/versions/latest
   SEARCH_API_KEY: projects/719240642737/secrets/search_api_key/versions/latest
   MODEL_NAME: "vertex_ai/gemini-2.5-pro"
   LOG_LEVEL: "INFO"

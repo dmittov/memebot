@@ -5,7 +5,7 @@ import traceback
 from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
-from functools import cache, cached_property
+from functools import cached_property
 from io import BytesIO
 
 import dspy
@@ -20,67 +20,28 @@ from pydantic import BaseModel, Field
 from telegram import Bot, Message
 
 from memebot.config import MODEL_NAME, get_explainer_config, get_token
-from memebot.retrievers import GermanNewsRetriever
+from memebot.retrievers import GoogleSearch
 
 logger = logging.getLogger(__name__)
-
-
-class SearchQueryModel(BaseModel):
-    lang: str = Field(
-        ...,
-        description=(
-            "Give the ISO 2-letter code for the majority of the text " "on the picture"
-        ),
-    )
-    has_person: bool = Field(
-        ...,
-        description=(
-            "Is there a famous person or a drawing of a famous person " "on the picture"
-        ),
-    )
-    has_animal: bool = Field(
-        ..., description="Is there an animal or drawing of an animal on the picture"
-    )
-    search_query: str = Field(
-        ...,
-        description=(
-            "Given that understanding this meme depends on the latest "
-            "developments in German news, suggest a specific Google search "
-            "query that would help uncover the relevant context. The query "
-            "must be in german."
-        ),
-    )
-    is_query: bool = Field(
-        ...,
-        description=(
-            "Does this meme make complete sense on its own, or does it seem "
-            "like understanding it requires knowledge of recent news events "
-            "in Germany?"
-        ),
-    )
-
-
-class SearchQuerySignature(dspy.Signature):
-    """Your task is to analyse a meme."""
-
-    caption: str = dspy.InputField(desc="Authors caption to the image. May be empty")
-    meme_image: dspy.Image = dspy.InputField(desc="The meme image")
-    search_query: SearchQueryModel = dspy.OutputField()
 
 
 class MemeInfoModel(BaseModel):
     lang: str = Field(
         description=(
-            "Give the ISO 2-letter code for the majority of the text " "on the picture"
+            "Give the ISO 2-letter code for the majority of the text on the picture"
         )
     )
-    has_person: bool = Field(
+    persons: set[str] = Field(
+        ...,
         description=(
-            "Is there a famous person or a drawing of a famous person " "on the picture"
-        )
+            "Analyze the image for any direct or indirect references to well-known "
+            "real people. Use search tool to get all recent news regarding this person"
+        ),
     )
-    has_animal: bool = Field(
-        description="Is there an animal or drawing of an animal on the picture",
+    animals: set[str] = Field(
+        ...,
+        description="Is there an animal or drawing of an animal on the picture? "
+        "Give a list of all animals on a picture.",
     )
     ru_translation: str = Field(
         description="Translate the text from the picture to russian"
@@ -118,16 +79,23 @@ class MemeInfoModel(BaseModel):
 
 
 class MemeInfoSignature(dspy.Signature):
-    """Your task is to analyse a meme. Your response must be in russian."""
+    """Your task is to analyse a meme. Perform reasoning in English. Your response must be in Russian.
+
+    Before choosing `next_tool_name = "finish"`, you MUST run a short internal checklist in `next_thought`:
+    - Extract and list all:
+        * names of real people, nicknames/handles, organizations, political parties, brands;
+        * hashtags;
+        * unusual or highlighted words (for example, words in quotation marks, slang, dialectal forms, or mixed languages).
+    - IF the meme contains ANY of the following:
+        * a real politician or other public figure;
+        * a brand or organization;
+        * at least one hashtag;
+        * at least one highlighted or unusual word (e.g. in quotes) that could have a special cultural, regional, or linguistic meaning;
+        THEN you MUST call `search` at least once before using `finish`.
+    """
 
     caption: str = dspy.InputField(desc="Authors caption to the image. May be empty.")
     meme_image: dspy.Image = dspy.InputField(desc="The meme image")
-    context: list[str] = dspy.InputField(
-        desc=(
-            "These news may be related to the meme and provide additional "
-            "information."
-        ),
-    )
     meme_info: MemeInfoModel = dspy.OutputField()
 
 
@@ -155,27 +123,17 @@ class Explainer:
         self.__subscriber.close()
 
     async def _explain(self, caption: str, image: Image.Image) -> MemeInfoModel:
-        search_query_extractor = dspy.Predict(SearchQuerySignature)
-        meme_info_extractor = dspy.Predict(MemeInfoSignature)
-
+        react = dspy.ReAct(
+            signature=MemeInfoSignature,
+            tools=[dspy.Tool(GoogleSearch().search)],
+            max_iters=5,
+        )
         meme_image = dspy.Image.from_PIL(image)
-
-        query = (
-            await search_query_extractor.acall(caption=caption, meme_image=meme_image)
-        ).search_query
-
-        context = []
-        if query.is_query:
-            retriver = GermanNewsRetriever()
-            context.extend(await retriver.search(query.search_query))
-
-        meme_info: MemeInfoModel = (
-            await meme_info_extractor.acall(
-                caption=caption,
-                meme_image=meme_image,
-                context=context,
-            )
-        ).meme_info
+        result: dspy.Prediction = await react.acall(
+            caption=caption,
+            meme_image=meme_image,
+        )
+        meme_info: MemeInfoModel = result.meme_info
 
         return meme_info
 
@@ -251,18 +209,22 @@ class Explainer:
             else message.reply_to_message.caption
         )
         meme_info = await self._explain(caption=caption, image=image)
+        part_translate = (
+            "\n\n" "### Перевод:" "\n" f"{meme_info.ru_translation}"
+            if meme_info.lang.upper() != "RU"
+            else ""
+        )
+        part_grammar = (
+            "\n\n" "### Грамматика:" "\n" f"{meme_info.grammar_explanation}"
+            if meme_info.lang.upper() == "DE"
+            else ""
+        )
         explanation = (
             "### Анализ мема:"
             "\n"
             f"{meme_info.explanation}"
-            "\n\n"
-            "### Перевод:"
-            "\n"
-            f"{meme_info.ru_translation}"
-            "\n\n"
-            "### Грамматика:"
-            "\n"
-            f"{meme_info.grammar_explanation}"
+            f"{part_translate}"
+            f"{part_grammar}"
             "\n\n"
             "### Оценка:"
             "\n"

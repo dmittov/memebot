@@ -6,14 +6,14 @@ from typing import Any
 import httpx
 from markdownify import markdownify
 
-from memebot.config import get_german_news_cx_key, get_search_api_key
+from memebot.config import get_search_api_key, get_search_cx_key
 
 
-class GermanNewsRetriever:
+class GoogleSearch:
 
     def __init__(self, **kwargs: Any) -> None:
         self.__search_api_key = get_search_api_key()
-        self.__get_german_news_cx_key = get_german_news_cx_key()
+        self.__search_cx_key = get_search_cx_key()
         self.__base_url = "https://www.googleapis.com/customsearch/v1"
         self.k: int = kwargs.get("k", 3)
         timeout: timedelta = kwargs.get("timeout", timedelta(seconds=30))
@@ -24,7 +24,7 @@ class GermanNewsRetriever:
     ) -> list[Coroutine[Any, Any, httpx.Response]]:
         params = dict(
             q=query,
-            cx=self.__get_german_news_cx_key,
+            cx=self.__search_cx_key,
             key=self.__search_api_key,
         )
         try:
@@ -41,19 +41,27 @@ class GermanNewsRetriever:
                 coroutines.append(client.get(link))
         return coroutines
 
-    async def search(self, query: str, k: int | None = None) -> list[str]:
+    async def search(self, query: str, k: int | None = None) -> str:
+        """Performs Google search. If there is some text on the meme_image use the same language for search."""
+        if k is None:
+            k = self.k
         documents = []
         async with httpx.AsyncClient(
             follow_redirects=True, timeout=self.timeout
         ) as client:
-            coroutines = await self._search(
-                client=client, query=query, k=k if k else self.k
-            )
+            coroutines = await self._search(client=client, query=query, k=k)
             for coroutine in asyncio.as_completed(coroutines):
                 try:
                     html_document = (await coroutine).text
-                    document = markdownify(html_document)
+                    document = markdownify(
+                        html_document,
+                        strip=[
+                            # Don't embed pictures as base64 into text, just ignore them
+                            # to save tokens. Text should be enough.
+                            "img",
+                        ],
+                    )
                     documents.append(document)
                 except httpx.TimeoutException:
                     ...
-        return documents
+        return "".join(f"Document:\n{document}\n\n" for document in documents)

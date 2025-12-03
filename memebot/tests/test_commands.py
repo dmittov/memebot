@@ -1,18 +1,15 @@
-import asyncio
 import json
 from asyncio.subprocess import Process
 
-import dspy
 import pytest
 from google.api_core.exceptions import DeadlineExceeded
 from google.cloud.pubsub_v1 import PublisherClient, SubscriberClient
-from PIL import Image
+from google.cloud.pubsub_v1.futures import Future as PublisherFuture
 from pytest_mock import MockerFixture
 from telegram import Bot, Message
 
 import memebot.commands as commands
 from memebot.config import get_explainer_config
-from memebot.explainer import Explainer
 from tests.helpers import clean_subscription
 
 
@@ -63,38 +60,13 @@ class TestExplainCommand:
     async def test_explain_success(
         self, mocker: MockerFixture, explain_message: Message
     ) -> None:
-        bot_mock = mocker.MagicMock(spec=Bot)
-        _ = mocker.patch("memebot.explainer.firestore", autospec=True)
-        _ = mocker.patch(
-            "memebot.explainer.Bot",
-            return_value=bot_mock,
-        )
-        _ = mocker.patch(
-            "memebot.commands.Bot",
-            return_value=bot_mock,
-        )
-        model_mock = mocker.MagicMock(spec=dspy.Predict)
-        _ = mocker.patch(
-            "memebot.explainer.dspy.Predict",
-            return_value=model_mock,
-        )
-        mock_get_image = mocker.patch("memebot.explainer.Explainer.get_image")
-        mock_news_retriver = mocker.patch(
-            "memebot.explainer.GermanNewsRetriever"
-        ).return_value
-        mock_news_retriver.search = mocker.AsyncMock(return_value=["Text1", "Text2"])
-        mock_get_image.return_value = Image.new(
-            mode="RGB", size=(200, 200), color=(255, 255, 255)
-        )
-
-        publisher_mock = mocker.MagicMock(spec=PublisherClient)
-        _ = mocker.patch(
-            "memebot.commands.PublisherClient", return_value=publisher_mock
-        )
-
         command = commands.ExplainCommand(explain_message)
+        mocker.patch.object(command, "validate", mocker.AsyncMock(return_value=True))
+        command.publisher = mocker.MagicMock(spec=PublisherClient)
+        future = mocker.AsyncMock(spec=PublisherFuture)
+        command.publisher.publish = mocker.MagicMock(return_value=future)
         await command.run()
-        assert bot_mock.send_message.call_count == 1
+        assert future.result.call_count == 1
 
     @pytest.mark.xdist_group("pubsub")
     @pytest.mark.pubsub
@@ -103,33 +75,10 @@ class TestExplainCommand:
         self, mocker: MockerFixture, explain_message: Message, pubsub: Process
     ) -> None:
         _ = pubsub
-        bot_mock = mocker.MagicMock(spec=Bot)
-        _ = mocker.patch("memebot.explainer.firestore", autospec=True)
-        _ = mocker.patch(
-            "memebot.explainer.Bot",
-            return_value=bot_mock,
-        )
-        _ = mocker.patch(
-            "memebot.commands.Bot",
-            return_value=bot_mock,
-        )
-        model_mock = mocker.MagicMock(spec=dspy.Predict)
-        _ = mocker.patch(
-            "memebot.explainer.dspy.Predict",
-            return_value=model_mock,
-        )
-        mock_get_image = mocker.patch("memebot.explainer.Explainer.get_image")
-        mock_news_retriver = mocker.patch(
-            "memebot.explainer.GermanNewsRetriever"
-        ).return_value
-        mock_news_retriver.search = mocker.AsyncMock(return_value=["Text1", "Text2"])
-        mock_get_image.return_value = Image.new(
-            mode="RGB", size=(200, 200), color=(255, 255, 255)
-        )
-
         clean_subscription(get_explainer_config().subscription)
 
         command = commands.ExplainCommand(explain_message)
+        mocker.patch.object(command, "validate", mocker.AsyncMock(return_value=True))
         await command.run()
 
         subscriber = SubscriberClient()
