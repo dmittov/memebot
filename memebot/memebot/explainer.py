@@ -34,33 +34,8 @@ class MemeInfoModel(BaseModel):
     persons: set[str] = Field(
         ...,
         description=(
-            "Analyze the image for any direct or indirect references to well-known real people. Use search tool to get all recent news regarding this person"
-            ""
-            "Instructions:"
-            "1. Direct depictions"
-            "   * Identify explicit depictions of real public figures (photos, drawings, caricatures, etc.)."
-            "2. Indirect / hidden references"
-            "   * Look for implicit references created through:"
-            "   * wordplay, puns, or phonetic similarity;"
-            "   * homophones and near-homophones;"
-            "   * partial names or fragmented names;"
-            "   * visually repeated fragments of a name;"
-            "   * culturally known meme patterns involving celebrities."
-            "3. Names that look like normal words"
-            "   * Treat any word or phrase in the image as a potential name, even if it is also a common noun or expression in that language (for example, a surname that is identical to a regular word like “valley”)."
-            "   * Do not dismiss such words as “just ordinary words” without first considering whether they could point to a famous person."
-            "4. Text analysis"
-            "   * If the image contains text, check whether any words, repeated phrases, stylistic emphasis, or unusual spelling/spacing could represent, sound like, or allude to a public figure’s name, even if disguised, split, rearranged, or translated."
-            "5. Multilingual awareness"
-            "   * Consider that the reference might rely on multiple languages or transliteration, where the sound of a word in one language hints at a person’s name from another language."
-            ""
-            "Output format:"
-            "* If you detect any likely references to famous real people (direct or indirect), use the search tool and output:"
-            "   * A list of the people’s names."
-            "   * For each, a short explanation of which visual or textual element suggests that person."
-            "   * For each say if the search shows the person is relevant to the meme."
-            "* If you do not detect any such references, explicitly answer:"
-            "   * No Person"
+            "Analyze the image for any direct or indirect references to well-known "
+            "real people. Use search tool to get all recent news regarding this person"
         ),
     )
     animals: set[str] = Field(
@@ -104,7 +79,20 @@ class MemeInfoModel(BaseModel):
 
 
 class MemeInfoSignature(dspy.Signature):
-    """Your task is to analyse a meme. Your response must be in russian."""
+    """Your task is to analyse a meme. Perform reasoning in English. Your response must be in Russian.
+    
+    Before choosing `next_tool_name = "finish"`, you MUST run a short internal checklist in `next_thought`:
+    - Extract and list all:
+        * names of real people, nicknames/handles, organizations, political parties, brands;
+        * hashtags;
+        * unusual or highlighted words (for example, words in quotation marks, slang, dialectal forms, or mixed languages).
+    - IF the meme contains ANY of the following:
+        * a real politician or other public figure;
+        * a brand or organization;
+        * at least one hashtag;
+        * at least one highlighted or unusual word (e.g. in quotes) that could have a special cultural, regional, or linguistic meaning;
+        THEN you MUST call `search` at least once before using `finish`.
+    """
 
     caption: str = dspy.InputField(desc="Authors caption to the image. May be empty.")
     meme_image: dspy.Image = dspy.InputField(desc="The meme image")

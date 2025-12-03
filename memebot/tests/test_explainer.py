@@ -35,6 +35,28 @@ class TestExplainer:
         assert img is not None
 
     # No GCP auth in testing env
+    @pytest.mark.skip
+    @pytest.mark.asyncio
+    async def test_broetchen(self) -> None:
+        image = Image.open("tests/img/broetchen.jpg")
+        vertexai.init()
+        lm = dspy.LM(
+            model="vertex_ai/gemini-2.5-pro",
+            # model="openai/qwen2.5vl:3b",
+            # api_base="http://localhost:11434/v1",
+            # api_key="fake",
+            temperature=0.0,
+            max_tokens=16384,
+        )
+        dspy.configure(lm=lm)
+        explainer = Explainer(loop=asyncio.get_running_loop())
+        result = await explainer._explain(
+            caption="", image=image
+        )
+        assert result.explanation is not None
+
+    # No GCP auth in testing env
+    @pytest.mark.skip
     @pytest.mark.asyncio
     async def test_dolina(self) -> None:
         image = Image.open("tests/img/dolina.jpg")
@@ -52,7 +74,7 @@ class TestExplainer:
         assert result.explanation is not None        
 
     # No GCP auth in testing env
-    # @pytest.mark.skip
+    @pytest.mark.skip
     @pytest.mark.asyncio
     async def test_search(self) -> None:
         image = Image.open("tests/img/ruhs.jpg")

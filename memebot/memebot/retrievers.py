@@ -42,6 +42,7 @@ class GoogleSearch:
         return coroutines
 
     async def search(self, query: str, k: int | None = None) -> str:
+        """Performs Google search. If there is some text on the meme_image use the same language for search."""
         if k is None:
             k = self.k
         documents = []
@@ -54,7 +55,14 @@ class GoogleSearch:
             for coroutine in asyncio.as_completed(coroutines):
                 try:
                     html_document = (await coroutine).text
-                    document = markdownify(html_document)
+                    document = markdownify(
+                        html_document,
+                        strip=[
+                            # Don't embed pictures as base64 into text, just ignore them
+                            # to save tokens. Text should be enough.
+                            "img",
+                        ],
+                    )
                     documents.append(document)
                 except httpx.TimeoutException:
                     ...
