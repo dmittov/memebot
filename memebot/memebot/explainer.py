@@ -13,7 +13,6 @@ import vertexai
 from google.cloud import firestore
 from google.cloud.firestore import FieldFilter
 from google.cloud.pubsub_v1 import SubscriberClient
-from google.cloud.pubsub_v1.subscriber.exceptions import AcknowledgeError
 from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
 from PIL import Image
 from pydantic import BaseModel, Field
