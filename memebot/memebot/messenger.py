@@ -49,11 +49,7 @@ class Messenger:
                 coro=method(**kwargs),
                 loop=self.__loop,
             )
-            ack_future = pubsub_msg.ack_with_response()
-            try:
-                ack_future.result(timeout=10.0)
-            except AcknowledgeError:
-                logger.error("Acknoledgement failed for message sending")
+            pubsub_msg.ack()
         except Exception as exc:
             tb = traceback.format_exc()
             logger.error("%s\n%s", str(exc), tb)
