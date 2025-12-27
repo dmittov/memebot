@@ -18,7 +18,7 @@ from google.cloud.pubsub_v1 import SubscriberClient
 from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
 from telegram import Bot, Message
 
-from memebot.config import get_channel_id, get_messenger_config, get_token
+from memebot.config import get_messenger_config, get_token
 from memebot.explainer import Explainer
 
 logger = getLogger(__name__)
@@ -149,6 +149,11 @@ class NewUserCensor(AbstractCensor):
         user = self.db.collection(self.collection).document(uid).get()
         if user.exists():
             return CensorResult(is_allowed=True)
+        
+        # check if the message has an image
+        if message.reply_to_message.photo is None:
+            return CensorResult(is_allowed=False, reason="No image in a message")
+        
         meme_info = await self.explainer.explain(message=message)
         if meme_info.meme_score >= self.threshold:
             self.register(user_id=str(message.from_user.id))
