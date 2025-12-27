@@ -52,6 +52,12 @@ class ExplainerConfig:
     subscription: str
 
 
+@dataclass
+class MessengerConfig:
+    topic: str
+    subscription: str
+
+
 @cache
 def get_explainer_config() -> ExplainerConfig:
     return ExplainerConfig(
@@ -59,6 +65,16 @@ def get_explainer_config() -> ExplainerConfig:
         subscription=os.getenv(
             "EXPLAIN_SUBSCRIPTION",
             "projects/test-project/subscriptions/sub-explain-pull",
+        ),
+    )
+
+@cache
+def get_messenger_config() -> MessengerConfig:
+    return MessengerConfig(
+        topic=os.getenv("MESSAGE_TOPIC", "projects/test-project/topics/message"),
+        subscription=os.getenv(
+            "MESSAGE_SUBSCRIPTION",
+            "projects/test-project/subscriptions/sub-message-pull",
         ),
     )
 
