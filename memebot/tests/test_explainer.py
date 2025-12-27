@@ -81,7 +81,7 @@ class TestExplainer:
         dspy.configure(lm=lm)
         explainer = Explainer()
         result = await explainer._explain(caption="", image=image)
-        assert result.explanation is not None        
+        assert result.explanation is not None
 
     # No GCP auth in testing env
     @pytest.mark.skip
@@ -119,7 +119,9 @@ class TestExplainSubscriber:
         _ = pubsub
         _ = lm
         explainer = ExplainSubscriber(loop=asyncio.get_running_loop())
-        mock_pull_message = mocker.patch("memebot.explainer.ExplainSubscriber.pull_message")
+        mock_pull_message = mocker.patch(
+            "memebot.explainer.ExplainSubscriber.pull_message"
+        )
 
         clean_subscription(get_explainer_config().subscription)
 

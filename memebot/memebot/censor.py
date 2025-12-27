@@ -1,21 +1,21 @@
 import abc
 import asyncio
+import json
+import traceback
 from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-import json
-import traceback
-from dateutil.relativedelta import relativedelta
 from functools import cached_property
 from logging import getLogger
 from typing import override
 from zoneinfo import ZoneInfo
-from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
-from google.cloud.pubsub_v1 import SubscriberClient
 
+from dateutil.relativedelta import relativedelta
 from google.cloud import firestore
 from google.cloud.firestore import FieldFilter, Increment
+from google.cloud.pubsub_v1 import SubscriberClient
+from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
 from telegram import Bot, Message
 
 from memebot.config import get_channel_id, get_messenger_config, get_token
@@ -130,7 +130,8 @@ class NewUserCensor(AbstractCensor):
     firestore_ttl = relativedelta(months=6)
     time_horizon = timedelta(hours=24)
     tz = ZoneInfo("Europe/Berlin")
-    collection = "allow_users"
+    collection: str = "allow_users"
+    threshold: int = 7
 
     def __init__(self):
         super().__init__()
@@ -149,12 +150,18 @@ class NewUserCensor(AbstractCensor):
         if user.exists():
             return CensorResult(is_allowed=True)
         meme_info = await self.explainer.explain(message=message)
-        if meme_info.meme_score >= 7:
+        if meme_info.meme_score >= self.threshold:
             self.register(user_id=str(message.from_user.id))
             return CensorResult(is_allowed=True)
         return CensorResult(
             is_allowed=False,
-            reason=f"Sorry - to help prevent automated spam, your first meme must receive a score of at least 7 out of 10 before it can be published. After that, you’ll be added to the allowlist (for 6 months) and can post memes normally.",
+            reason=(
+                "Sorry - to help prevent automated spam, your first meme must receive "
+                f"a score of at least {self.threshold} out of 10 before it "
+                "can be published. "
+                "After that, you’ll be added to the allowlist (for 6 months) and "
+                "can post memes normally.",
+            ),
         )
 
     @override

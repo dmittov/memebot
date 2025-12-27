@@ -12,10 +12,10 @@ from logging import getLogger
 from fastapi import FastAPI, Request, Response
 from telegram import Bot, Update
 
+from memebot.censor import get_censor
 from memebot.commands import CommandInterface, build_command
 from memebot.config import get_token
 from memebot.explainer import get_explainer
-from memebot.censor import get_censor
 
 logger = getLogger(__name__)
 
