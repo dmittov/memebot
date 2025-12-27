@@ -233,3 +233,7 @@ class CensorSubscriber:
                 chat_id=message.chat.id,
                 text=result.reason,
             )
+
+
+def get_censor(loop: asyncio.AbstractEventLoop) -> CensorSubscriber:
+    return CensorSubscriber(loop=loop)
