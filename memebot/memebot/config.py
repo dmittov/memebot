@@ -68,6 +68,7 @@ def get_explainer_config() -> ExplainerConfig:
         ),
     )
 
+
 @cache
 def get_messenger_config() -> MessengerConfig:
     return MessengerConfig(

@@ -49,7 +49,7 @@ class MemeInfoModel(BaseModel):
         description="Explain all german B1+ grammar, ignore obvious grammar "
         "that is well known by people able to pass B1 exam.",
     )
-    meme_score: str = Field(
+    score: int = Field(
         description=(
             "Give this meme a score from 1 to 10, where 1 is totally not funny "
             "and 10 is awesome. Value memes in German more than in any other "
@@ -98,34 +98,22 @@ class MemeInfoSignature(dspy.Signature):
     meme_info: MemeInfoModel = dspy.OutputField()
 
 
+class ExplainerException: ...
+
+
+class TooManyExplains(ExplainerException): ...
+
+
+class IsAlreadyExplained(ExplainerException): ...
+
+
 class Explainer:
-    # TODO: firestore
-
-    def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
-        self.n_generations_limit = 10
-        self.n_hour_limit = 24
-        self.__loop = loop
-
-    @contextmanager
-    def subscription(self) -> Generator[None, None, None]:
-        self.__subscriber = SubscriberClient()
-        self.__subscriber_future = self.__subscriber.subscribe(
-            subscription=get_explainer_config().subscription,
-            callback=self.pull_message,
-        )
-        yield
-        self.__subscriber_future.cancel()
-        try:
-            self.__subscriber_future.result()
-        except Exception:
-            ...
-        self.__subscriber.close()
 
     async def _explain(self, caption: str, image: Image.Image) -> MemeInfoModel:
         react = dspy.ReAct(
             signature=MemeInfoSignature,
             tools=[dspy.Tool(GoogleSearch().search)],
-            max_iters=5,
+            max_iters=7,
         )
         meme_image = dspy.Image.from_PIL(image)
         result: dspy.Prediction = await react.acall(
@@ -133,14 +121,13 @@ class Explainer:
             meme_image=meme_image,
         )
         meme_info: MemeInfoModel = result.meme_info
-
         return meme_info
 
     @cached_property
     def db(self) -> firestore.Client:
         return firestore.Client()
 
-    async def __check(self, message: Message) -> bool:
+    def __check(self, message: Message) -> None:
         since = datetime.now(timezone.utc) - timedelta(hours=self.n_hour_limit)
         buckets = self.db.collection("llm_requests").where(
             filter=FieldFilter("ts", ">=", since)
@@ -150,30 +137,17 @@ class Explainer:
             n_requests += 1
             assert message.reply_to_message is not None
             if message.reply_to_message.id == doc.to_dict().get("message_id", 0):
-                await Bot(token=get_token()).send_message(
-                    chat_id=message.chat.id,
-                    reply_to_message_id=message.id,
-                    text="This meme was already explained",
-                )
-                return False
+                raise IsAlreadyExplained()
             if n_requests >= self.n_generations_limit:
-                await Bot(token=get_token()).send_message(
-                    chat_id=message.chat.id,
-                    reply_to_message_id=message.id,
-                    text=f"Too many requests per {self.n_hour_limit} hours",
-                )
-                return False
-        return True
+                raise TooManyExplains()
+        return
 
-    def __register(self, message: Message) -> None:
-        now = datetime.now(timezone.utc)
-        assert message.reply_to_message is not None
-        bucket_id = f"{message.reply_to_message.id}"
-        bucket_ref = self.db.collection("llm_requests").document(bucket_id)
-        bucket_ref.set(
+    def __register(self, message_id: str) -> None:
+        self.db.collection("llm_requests").document(message_id).set(
             {
-                "expiresAt": now + timedelta(hours=self.n_hour_limit),
-                "message_id": message.reply_to_message.id,
+                "expiresAt": datetime.now(timezone.utc)
+                + timedelta(hours=self.n_hour_limit),
+                "message_id": message_id,
             }
         )
 
@@ -196,10 +170,12 @@ class Explainer:
         logger.info("Image resolution: %s", repr(image.size))
         return image
 
-    async def explain(self, message: Message) -> None:
+    async def explain(self, message: Message) -> MemeInfoModel:
         logger.info("Running explain")
-        if not (await self.__check(message=message)):
-            return
+        try:
+            await self.__check(message=message)
+        except ExplainerException:
+            raise
         image = await self.get_image(message=message)
         assert message.reply_to_message is not None
         caption = (
@@ -208,6 +184,52 @@ class Explainer:
             else message.reply_to_message.caption
         )
         meme_info = await self._explain(caption=caption, image=image)
+        self.__register(message_id=str(message.reply_to_message.id))
+        return meme_info
+
+
+class ExplainSubscriber:
+
+    def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
+        self.n_generations_limit = 25
+        self.n_hour_limit = 24
+        self.__loop = loop
+        self.explainer = Explainer()
+
+    @contextmanager
+    def subscription(self) -> Generator[None, None, None]:
+        self.__subscriber = SubscriberClient()
+        self.__subscriber_future = self.__subscriber.subscribe(
+            subscription=get_explainer_config().subscription,
+            callback=self.pull_message,
+        )
+        yield
+        self.__subscriber_future.cancel()
+        try:
+            self.__subscriber_future.result()
+        except Exception:
+            ...
+        self.__subscriber.close()
+
+    async def explain(self, message: Message) -> None:
+        try:
+            meme_info = await self.explainer.explain(message=message)
+        except TooManyExplains:
+            text = f"Sorry, too many explain calls in {self.n_hour_limit} hours. Try again later."
+            await Bot(token=get_token()).send_message(
+                chat_id=message.chat.id,
+                reply_to_message_id=message.id,
+                text=text,
+            )
+            return
+        except IsAlreadyExplained:
+            text = "Looks like this meme was already explained."
+            await Bot(token=get_token()).send_message(
+                chat_id=message.chat.id,
+                reply_to_message_id=message.id,
+                text=text,
+            )
+            return
         part_translate = (
             "\n\n" "### Перевод:" "\n" f"{meme_info.ru_translation}"
             if meme_info.lang.upper() != "RU"
@@ -227,14 +249,13 @@ class Explainer:
             "\n\n"
             "### Оценка:"
             "\n"
-            f"{meme_info.meme_score}"
+            f"{meme_info.score}/10"
         )
         logger.info(repr(meme_info))
         logger.info("Going to send to %d", message.chat.id)
         await Bot(token=get_token()).send_message(
             chat_id=message.chat.id, reply_to_message_id=message.id, text=explanation
         )
-        self.__register(message=message)
 
     def pull_message(self, pubsub_msg: PubSubMessage) -> None:
         try:
@@ -259,5 +280,5 @@ def get_explainer(loop: asyncio.AbstractEventLoop) -> Explainer:
         temperature=0.0,
         max_tokens=16384,
     )
-    dspy.configure(lm=lm)
+    dspy.configure(lm=lm, adapter=dspy.JSONAdapter())
     return Explainer(loop=loop)
