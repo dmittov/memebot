@@ -18,7 +18,7 @@ from google.cloud.pubsub_v1 import SubscriberClient
 from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
 from telegram import Bot, Message
 
-from memebot.config import get_messenger_config, get_token
+from memebot.config import get_channel_id, get_messenger_config, get_token
 from memebot.explainer import Explainer
 
 logger = getLogger(__name__)
@@ -162,8 +162,8 @@ class NewUserCensor(AbstractCensor):
         
         logger.info("NewUserCensor check for user [%s] ... [running explain]", uid)
         meme_info = await self.explainer.explain(message=message)
-        if meme_info.meme_score >= self.threshold:
-            self.register(user_id=str(message.from_user.id))
+        if meme_info.score >= self.threshold:
+            self.__register(user_id=str(message.from_user.id))
             logger.info("NewUserCensor check for user [%s] [passed]", uid)
             return CensorResult(is_allowed=True)
         logger.info("NewUserCensor check for user [%s] [failed]", uid)
@@ -178,8 +178,7 @@ class NewUserCensor(AbstractCensor):
             ),
         )
 
-    @override
-    def register(self, user_id: str) -> None:
+    def __register(self, user_id: str) -> None:
         dt = datetime.now(timezone.utc)
         data = {
             "user_id": user_id,
@@ -249,11 +248,19 @@ class CensorSubscriber:
 
     async def check(self, message: Message) -> None:
         result = await self.censor.check(message=message)
+        bot = Bot(token=get_token())
         if result.reason:
-            await Bot(token=get_token()).send_message(
+            await bot.send_message(
                 chat_id=message.chat.id,
                 text=result.reason,
             )
+        if result.is_allowed:
+            response =  await bot.forward_message(
+                chat_id=get_channel_id(),
+                from_chat_id=message.chat.id,
+                message_id=message.message_id,
+            )
+            logger.info(response)
 
 
 def get_censor(loop: asyncio.AbstractEventLoop) -> CensorSubscriber:

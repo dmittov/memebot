@@ -108,12 +108,17 @@ class IsAlreadyExplained(ExplainerException): ...
 
 
 class Explainer:
+    # FIXME: rely on message id is incorrect, use file_id instead
+
+    n_hour_limit = 24
+    n_generations_limit = 25
 
     async def _explain(self, caption: str, image: Image.Image) -> MemeInfoModel:
+        logger.info("caption: %s \nimage: [%s]", caption, str(image))
         react = dspy.ReAct(
             signature=MemeInfoSignature,
             tools=[dspy.Tool(GoogleSearch().search)],
-            max_iters=7,
+            max_iters=5,
         )
         meme_image = dspy.Image.from_PIL(image)
         result: dspy.Prediction = await react.acall(
@@ -121,6 +126,7 @@ class Explainer:
             meme_image=meme_image,
         )
         meme_info: MemeInfoModel = result.meme_info
+        logger.info("Meme info: %s", str(meme_info))
         return meme_info
 
     @cached_property
@@ -141,16 +147,16 @@ class Explainer:
                 else message.message_id
             )
             if message_id == doc.to_dict().get("message_id", 0):
+                logger.info("Is explained")
                 raise IsAlreadyExplained()
             if n_requests >= self.n_generations_limit:
+                logger.info("Too many requests")
                 raise TooManyExplains()
-        return
 
     def __register(self, message_id: str) -> None:
         self.db.collection("llm_requests").document(message_id).set(
             {
-                "expiresAt": datetime.now(timezone.utc)
-                + timedelta(hours=self.n_hour_limit),
+                "expiresAt": datetime.now(timezone.utc) + timedelta(hours=self.n_hour_limit),
                 "message_id": message_id,
             }
         )
@@ -181,7 +187,7 @@ class Explainer:
     async def explain(self, message: Message) -> MemeInfoModel:
         logger.info("Running explain")
         try:
-            await self.__check(message=message)
+            self.__check(message=message)
         except ExplainerException:
             raise
         image = await self.get_image(message=message)
@@ -196,20 +202,20 @@ class Explainer:
             else original_caption
         )
         meme_info = await self._explain(caption=caption, image=image)
+        logger.info(message)
         self.__register(
             message_id= (
                 str(message.reply_to_message.id))
                 if message.reply_to_message
                 else str(message.message_id)
             )
+        logger.info("Registered")
         return meme_info
 
 
 class ExplainSubscriber:
 
     def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
-        self.n_generations_limit = 25
-        self.n_hour_limit = 24
         self.__loop = loop
         self.explainer = Explainer()
 
@@ -295,7 +301,7 @@ def get_explainer(loop: asyncio.AbstractEventLoop) -> ExplainSubscriber:
     lm = dspy.LM(
         MODEL_NAME,
         temperature=0.0,
-        max_tokens=16384,
+        max_tokens=32567,
     )
     dspy.configure(lm=lm, adapter=dspy.JSONAdapter())
     return ExplainSubscriber(loop=loop)
