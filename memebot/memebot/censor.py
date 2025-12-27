@@ -151,12 +151,13 @@ class NewUserCensor(AbstractCensor):
         uid = str(message.from_user.id)
         logger.info("NewUserCensor check for user [%s] ...", uid)
         user = self.db.collection(self.collection).document(uid).get()
-        if user.exists():
+        if user.exists:
             logger.info("NewUserCensor check for user [%s] [passed]", uid)
             return CensorResult(is_allowed=True)
         
         # check if the message has an image
-        if message.reply_to_message.photo is None:
+        if message.photo is None:
+            logger.info("NewUserCensor check for user [%s] [failed] [no image]", uid)
             return CensorResult(is_allowed=False, reason="No image in a message")
         
         logger.info("NewUserCensor check for user [%s] ... [running explain]", uid)

@@ -135,8 +135,12 @@ class Explainer:
         n_requests = 0
         for doc in buckets.stream():
             n_requests += 1
-            assert message.reply_to_message is not None
-            if message.reply_to_message.id == doc.to_dict().get("message_id", 0):
+            message_id = (
+                message.reply_to_message.id 
+                if message.reply_to_message is not None 
+                else message.message_id
+            )
+            if message_id == doc.to_dict().get("message_id", 0):
                 raise IsAlreadyExplained()
             if n_requests >= self.n_generations_limit:
                 raise TooManyExplains()
@@ -152,11 +156,15 @@ class Explainer:
         )
 
     async def get_image(self, message: Message) -> Image.Image:
-        assert message.reply_to_message is not None
+        photo_block = (
+            message.reply_to_message.photo
+            if message.reply_to_message is not None
+            else message.photo
+        )
         file_record = max(
             (
                 photo
-                for photo in message.reply_to_message.photo
+                for photo in photo_block
                 if (photo.width < 800 and photo.height < 800)
             ),
             key=lambda photo: photo.width,
@@ -177,14 +185,23 @@ class Explainer:
         except ExplainerException:
             raise
         image = await self.get_image(message=message)
-        assert message.reply_to_message is not None
+        original_caption = (
+            message.reply_to_message.caption 
+            if message.reply_to_message
+            else message.caption
+        )
         caption = (
             "" ""
-            if not message.reply_to_message.caption
-            else message.reply_to_message.caption
+            if not original_caption
+            else original_caption
         )
         meme_info = await self._explain(caption=caption, image=image)
-        self.__register(message_id=str(message.reply_to_message.id))
+        self.__register(
+            message_id= (
+                str(message.reply_to_message.id))
+                if message.reply_to_message
+                else str(message.message_id)
+            )
         return meme_info
 
 
