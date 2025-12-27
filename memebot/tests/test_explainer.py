@@ -15,7 +15,7 @@ from pytest_mock import MockerFixture
 from telegram import Bot, Message
 
 from memebot.config import get_explainer_config, get_token
-from memebot.explainer import Explainer
+from memebot.explainer import Explainer, ExplainSubscriber
 from tests.helpers import clean_subscription
 
 
@@ -49,7 +49,7 @@ class TestExplainer:
             max_tokens=16384,
         )
         dspy.configure(lm=lm)
-        explainer = Explainer(loop=asyncio.get_running_loop())
+        explainer = Explainer()
         result = await explainer._explain(caption="", image=image)
         assert result.explanation is not None
 
@@ -65,9 +65,23 @@ class TestExplainer:
             max_tokens=16384,
         )
         dspy.configure(lm=lm)
-        explainer = Explainer(loop=asyncio.get_running_loop())
+        explainer = Explainer()
         result = await explainer._explain(caption="", image=image)
         assert result.explanation is not None
+
+    @pytest.mark.asyncio
+    async def test_squidward(self) -> None:
+        image = Image.open("tests/img/squidward.jpg")
+        vertexai.init()
+        lm = dspy.LM(
+            model="vertex_ai/gemini-2.5-pro",
+            temperature=0.0,
+            max_tokens=16384,
+        )
+        dspy.configure(lm=lm)
+        explainer = Explainer()
+        result = await explainer._explain(caption="", image=image)
+        assert result.explanation is not None        
 
     # No GCP auth in testing env
     @pytest.mark.skip
@@ -84,12 +98,14 @@ class TestExplainer:
             max_tokens=16384,
         )
         dspy.configure(lm=lm)
-        explainer = Explainer(loop=asyncio.get_running_loop())
+        explainer = Explainer()
         result = await explainer._explain(
             caption="Woman on the photo is Julia Ruhs", image=image
         )
         assert result.explanation is not None
 
+
+class TestExplainSubscriber:
     @pytest.mark.xdist_group("pubsub")
     @pytest.mark.pubsub
     @pytest.mark.asyncio
@@ -102,8 +118,8 @@ class TestExplainer:
     ) -> None:
         _ = pubsub
         _ = lm
-        explainer = Explainer(loop=asyncio.get_running_loop())
-        mock_pull_message = mocker.patch("memebot.explainer.Explainer.pull_message")
+        explainer = ExplainSubscriber(loop=asyncio.get_running_loop())
+        mock_pull_message = mocker.patch("memebot.explainer.ExplainSubscriber.pull_message")
 
         clean_subscription(get_explainer_config().subscription)
 
@@ -128,8 +144,8 @@ class TestExplainer:
     async def test_pull_message(
         self, mocker: MockerFixture, explain_message: Message
     ) -> None:
-        explainer = Explainer(loop=asyncio.get_running_loop())
-        mock_explain = mocker.patch("memebot.explainer.Explainer.explain")
+        explainer = ExplainSubscriber(loop=asyncio.get_running_loop())
+        mock_explain = mocker.patch("memebot.explainer.ExplainSubscriber.explain")
 
         _raw_proto_pubbsub_message = gapic_types.PubsubMessage.pb()
         msg_pb = _raw_proto_pubbsub_message(

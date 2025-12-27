@@ -273,7 +273,7 @@ class ExplainSubscriber:
             pubsub_msg.nack()
 
 
-def get_explainer(loop: asyncio.AbstractEventLoop) -> Explainer:
+def get_explainer(loop: asyncio.AbstractEventLoop) -> ExplainSubscriber:
     vertexai.init()
     lm = dspy.LM(
         MODEL_NAME,
@@ -281,4 +281,4 @@ def get_explainer(loop: asyncio.AbstractEventLoop) -> Explainer:
         max_tokens=16384,
     )
     dspy.configure(lm=lm, adapter=dspy.JSONAdapter())
-    return Explainer(loop=loop)
+    return ExplainSubscriber(loop=loop)
