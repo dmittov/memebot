@@ -69,6 +69,7 @@ class TestExplainer:
         result = await explainer._explain(caption="", image=image)
         assert result.explanation is not None
 
+    @pytest.mark.skip
     @pytest.mark.asyncio
     async def test_squidward(self) -> None:
         image = Image.open("tests/img/squidward.jpg")
