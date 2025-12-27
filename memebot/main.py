@@ -15,7 +15,7 @@ from telegram import Bot, Update
 from memebot.commands import CommandInterface, build_command
 from memebot.config import get_token
 from memebot.explainer import get_explainer
-from memebot.messenger import get_messenger
+from memebot.censor import get_censor
 
 logger = getLogger(__name__)
 
@@ -69,8 +69,8 @@ async def set_webhook() -> None:
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     await set_webhook()
     app.state.explainer = get_explainer(loop=asyncio.get_running_loop())
-    app.state.messenger = get_messenger(loop=asyncio.get_running_loop())
-    with app.state.explainer.subscription(), app.state.messenger.subscription():
+    app.state.censor = get_censor(loop=asyncio.get_running_loop())
+    with app.state.explainer.subscription(), app.state.censor.subscription():
         yield
 
 
