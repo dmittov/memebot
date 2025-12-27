@@ -17,7 +17,7 @@ from pytest_mock import MockerFixture
 from telegram import Chat, Message, PhotoSize
 
 from main import app
-from memebot.config import get_channel_id, get_explainer_config
+from memebot.config import get_channel_id, get_explainer_config, get_messenger_config
 
 
 @pytest.fixture
@@ -133,11 +133,15 @@ async def pubsub(
     def create_topic() -> None:
         publisher = PublisherClient()
         publisher.create_topic(name=get_explainer_config().topic)
+        publisher.create_topic(name=get_messenger_config().topic)
 
     def create_subscription() -> None:
         subscriber = SubscriberClient()
         subscriber.create_subscription(
             name=get_explainer_config().subscription, topic=get_explainer_config().topic
+        )
+        subscriber.create_subscription(
+            name=get_messenger_config().subscription, topic=get_messenger_config().topic
         )
 
     try:

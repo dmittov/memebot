@@ -62,8 +62,6 @@ class TestMessenger:
         messenger = Messenger(loop=asyncio.get_running_loop())
         mock_bot = mocker.patch("memebot.messenger.Bot")
         mock_bot.return_value = mocker.AsyncMock(spec=Bot)
-        mock_ack = mocker.MagicMock()
-        mock_ack.result = mocker.MagicMock()
 
         _raw_proto_pubbsub_message = gapic_types.PubsubMessage.pb()
         msg_pb = _raw_proto_pubbsub_message(
@@ -76,7 +74,7 @@ class TestMessenger:
             delivery_attempt=0,
             request_queue=queue.Queue(),
         )
-        pubsub_message.ack_with_response = mocker.MagicMock(return_value=mock_ack)
+        pubsub_message.ack = mocker.MagicMock()
 
         messenger.pull_message(pubsub_message)
         await asyncio.sleep(0)  # Allow the event loop to run
@@ -84,8 +82,7 @@ class TestMessenger:
         mock_bot.return_value.send_message.assert_called_once_with(
             chat_id=message_to_send["chat_id"], text=message_to_send["text"]
         )
-        pubsub_message.ack_with_response.assert_called_once()
-        mock_ack.result.assert_called_once()
+        pubsub_message.ack.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_pull_message_forward(
@@ -94,8 +91,6 @@ class TestMessenger:
         messenger = Messenger(loop=asyncio.get_running_loop())
         mock_bot = mocker.patch("memebot.messenger.Bot")
         mock_bot.return_value = mocker.AsyncMock(spec=Bot)
-        mock_ack = mocker.MagicMock()
-        mock_ack.result = mocker.MagicMock()
 
         _raw_proto_pubbsub_message = gapic_types.PubsubMessage.pb()
         msg_pb = _raw_proto_pubbsub_message(
@@ -108,7 +103,7 @@ class TestMessenger:
             delivery_attempt=0,
             request_queue=queue.Queue(),
         )
-        pubsub_message.ack_with_response = mocker.MagicMock(return_value=mock_ack)
+        pubsub_message.ack = mocker.MagicMock()
 
         messenger.pull_message(pubsub_message)
         await asyncio.sleep(0)
@@ -118,8 +113,7 @@ class TestMessenger:
             from_chat_id=message_to_forward["from_chat_id"],
             message_id=message_to_forward["message_id"],
         )
-        pubsub_message.ack_with_response.assert_called_once()
-        mock_ack.result.assert_called_once()
+        pubsub_message.ack.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_pull_message_unknown_method(self, mocker: MockerFixture) -> None:

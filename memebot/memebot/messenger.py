@@ -6,7 +6,6 @@ import logging
 import traceback
 from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
 from google.cloud.pubsub_v1 import SubscriberClient
-from google.cloud.pubsub_v1.subscriber.exceptions import AcknowledgeError
 from telegram import Bot
 from memebot.config import get_messenger_config, get_token
 
