@@ -36,7 +36,7 @@ class AbstractCensor(abc.ABC):
     async def check(self, message: Message) -> CensorResult: ...
 
 
-class SimpleTimeCensor(AbstractCensor):
+class TimeCensor(AbstractCensor):
 
     firestore_ttl = timedelta(hours=25)
     time_horizon = timedelta(hours=24)
@@ -87,6 +87,7 @@ class SimpleTimeCensor(AbstractCensor):
         assert message.from_user is not None
         since = datetime.now(timezone.utc) - self.time_horizon
         uid = str(message.from_user.id)
+        logger.info("TimeCensor check for user [%s] ...", uid)
         buckets = (
             self.db.collection("posts")
             .document(uid)
@@ -100,6 +101,7 @@ class SimpleTimeCensor(AbstractCensor):
             n_msg += doc_dict.get("count", 0)
             can_post_from = (doc_dict["ts"] + self.time_horizon).astimezone(self.tz)
             if n_msg >= self.n_message_limit:
+                logger.info("TimeCensor check for user [%s] [failed]", uid)
                 return CensorResult(
                     is_allowed=False,
                     reason=(
@@ -115,6 +117,7 @@ class SimpleTimeCensor(AbstractCensor):
         if (n_msg > 0) and (n_msg_left == 0):
             reason += f"\nYou can create next post from {can_post_from}"
         self.register(message=message)
+        logger.info("TimeCensor check for user [%s] [passed]", uid)
         return CensorResult(
             is_allowed=True,
             reason=reason,
@@ -139,25 +142,30 @@ class NewUserCensor(AbstractCensor):
 
     @cached_property
     def db(self) -> firestore.Client:
-        # FIXME: see SimpleTimeCensor.db
+        # FIXME: see TimeCensor.db
         return firestore.Client()
 
     @override
     async def check(self, message: Message) -> CensorResult:
         assert message.from_user is not None
         uid = str(message.from_user.id)
+        logger.info("NewUserCensor check for user [%s] ...", uid)
         user = self.db.collection(self.collection).document(uid).get()
         if user.exists():
+            logger.info("NewUserCensor check for user [%s] [passed]", uid)
             return CensorResult(is_allowed=True)
         
         # check if the message has an image
         if message.reply_to_message.photo is None:
             return CensorResult(is_allowed=False, reason="No image in a message")
         
+        logger.info("NewUserCensor check for user [%s] ... [running explain]", uid)
         meme_info = await self.explainer.explain(message=message)
         if meme_info.meme_score >= self.threshold:
             self.register(user_id=str(message.from_user.id))
+            logger.info("NewUserCensor check for user [%s] [passed]", uid)
             return CensorResult(is_allowed=True)
+        logger.info("NewUserCensor check for user [%s] [failed]", uid)
         return CensorResult(
             is_allowed=False,
             reason=(
@@ -183,14 +191,14 @@ class NewUserCensor(AbstractCensor):
 class CombinedCensor(AbstractCensor):
     def __init__(self) -> None:
         self.censors: list[AbstractCensor] = [
-            SimpleTimeCensor(),
+            TimeCensor(),
             NewUserCensor(),
         ]
 
-    def check(self, message: Message) -> CensorResult:
+    async def check(self, message: Message) -> CensorResult:
         reason: str = ""
         for censor in self.censors:
-            result: CensorResult = censor.check(message)
+            result: CensorResult = await censor.check(message)
             if not result.is_allowed:
                 return result
             if result.reason:
