@@ -23,7 +23,12 @@ def message_to_send() -> dict:
 
 @pytest.fixture
 def message_to_forward() -> dict:
-    return {"method": "forward_message", "chat_id": 123, "from_chat_id": 456, "message_id": 789}
+    return {
+        "method": "forward_message",
+        "chat_id": 123,
+        "from_chat_id": 456,
+        "message_id": 789,
+    }
 
 
 class TestMessenger:
