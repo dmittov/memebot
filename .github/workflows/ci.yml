@@ -22,7 +22,10 @@ jobs:
       - name: Check import order with isort
         run: isort --check .
         working-directory: memebot
-      - name: Run mypy
+      - name: Install mypy stubs
+        run: mypy --install-types --non-interactive .
+        working-directory: memebot
+      - name: Run mypy  
         run: mypy .
         working-directory: memebot
       - name: Run tests
