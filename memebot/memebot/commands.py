@@ -7,7 +7,12 @@ from google.cloud.pubsub_v1 import PublisherClient
 from telegram import Bot, Message
 
 from memebot.censor import DefaultCensor
-from memebot.config import get_channel_id, get_explainer_config, get_messenger_config, get_token
+from memebot.config import (
+    get_channel_id,
+    get_explainer_config,
+    get_messenger_config,
+    get_token,
+)
 
 logger = getLogger(__name__)
 
@@ -42,7 +47,7 @@ class ForwardCommand(CommandInterface):
     @cached_property
     def publisher(self) -> PublisherClient:
         return PublisherClient()
-    
+
     @cached_property
     def topic(self) -> str:
         return get_messenger_config().topic

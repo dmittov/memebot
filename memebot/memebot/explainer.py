@@ -142,8 +142,8 @@ class Explainer:
         for doc in buckets.stream():
             n_requests += 1
             message_id = (
-                message.reply_to_message.id 
-                if message.reply_to_message is not None 
+                message.reply_to_message.id
+                if message.reply_to_message is not None
                 else message.message_id
             )
             if message_id == doc.to_dict().get("message_id", 0):
@@ -156,7 +156,8 @@ class Explainer:
     def __register(self, message_id: str) -> None:
         self.db.collection("llm_requests").document(message_id).set(
             {
-                "expiresAt": datetime.now(timezone.utc) + timedelta(hours=self.n_hour_limit),
+                "expiresAt": datetime.now(timezone.utc)
+                + timedelta(hours=self.n_hour_limit),
                 "message_id": message_id,
             }
         )
@@ -192,23 +193,20 @@ class Explainer:
             raise
         image = await self.get_image(message=message)
         original_caption = (
-            message.reply_to_message.caption 
+            message.reply_to_message.caption
             if message.reply_to_message
             else message.caption
         )
-        caption = (
-            "" ""
-            if not original_caption
-            else original_caption
-        )
+        caption = "" "" if not original_caption else original_caption
         meme_info = await self._explain(caption=caption, image=image)
         logger.info(message)
         self.__register(
-            message_id= (
-                str(message.reply_to_message.id))
+            message_id=(
+                (str(message.reply_to_message.id))
                 if message.reply_to_message
                 else str(message.message_id)
             )
+        )
         logger.info("Registered")
         return meme_info
 

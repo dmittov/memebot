@@ -154,12 +154,12 @@ class NewUserCensor(AbstractCensor):
         if user.exists:
             logger.info("NewUserCensor check for user [%s] [passed]", uid)
             return CensorResult(is_allowed=True)
-        
+
         # check if the message has an image
         if message.photo is None:
             logger.info("NewUserCensor check for user [%s] [failed] [no image]", uid)
             return CensorResult(is_allowed=False, reason="No image in a message")
-        
+
         logger.info("NewUserCensor check for user [%s] ... [running explain]", uid)
         meme_info = await self.explainer.explain(message=message)
         if meme_info.score >= self.threshold:
@@ -255,7 +255,7 @@ class CensorSubscriber:
                 text=result.reason,
             )
         if result.is_allowed:
-            response =  await bot.forward_message(
+            response = await bot.forward_message(
                 chat_id=get_channel_id(),
                 from_chat_id=message.chat.id,
                 message_id=message.message_id,
