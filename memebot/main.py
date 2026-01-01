@@ -12,7 +12,7 @@ from logging import getLogger
 from fastapi import FastAPI, Request, Response
 from telegram import Bot, Update
 
-from memebot import config
+from memebot.censor import get_censor
 from memebot.commands import CommandInterface, build_command
 from memebot.config import get_token
 from memebot.explainer import get_explainer
@@ -69,7 +69,8 @@ async def set_webhook() -> None:
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     await set_webhook()
     app.state.explainer = get_explainer(loop=asyncio.get_running_loop())
-    with app.state.explainer.subscription():
+    app.state.censor = get_censor(loop=asyncio.get_running_loop())
+    with app.state.explainer.subscription(), app.state.censor.subscription():
         yield
 
 

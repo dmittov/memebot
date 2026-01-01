@@ -18,6 +18,8 @@ env_variables:
   LOG_LEVEL: "INFO"
   EXPLAIN_TOPIC: "projects/memebot-459222/topics/explain"
   EXPLAIN_SUBSCRIPTION: "projects/memebot-459222/subscriptions/sub-explain-pull"
+  MESSAGE_TOPIC: "projects/memebot-459222/topics/message"
+  MESSAGE_SUBSCRIPTION: "projects/memebot-459222/subscriptions/sub-message-pull"
 
 service_account: memebot-459222@appspot.gserviceaccount.com
 # ─── URL routing ──────────────────────────────────────────────────────────────

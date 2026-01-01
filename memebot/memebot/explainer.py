@@ -13,7 +13,6 @@ import vertexai
 from google.cloud import firestore
 from google.cloud.firestore import FieldFilter
 from google.cloud.pubsub_v1 import SubscriberClient
-from google.cloud.pubsub_v1.subscriber.exceptions import AcknowledgeError
 from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
 from PIL import Image
 from pydantic import BaseModel, Field
@@ -50,7 +49,7 @@ class MemeInfoModel(BaseModel):
         description="Explain all german B1+ grammar, ignore obvious grammar "
         "that is well known by people able to pass B1 exam.",
     )
-    meme_score: str = Field(
+    score: int = Field(
         description=(
             "Give this meme a score from 1 to 10, where 1 is totally not funny "
             "and 10 is awesome. Value memes in German more than in any other "
@@ -99,13 +98,124 @@ class MemeInfoSignature(dspy.Signature):
     meme_info: MemeInfoModel = dspy.OutputField()
 
 
+class ExplainerException(Exception): ...
+
+
+class TooManyExplains(ExplainerException): ...
+
+
+class IsAlreadyExplained(ExplainerException): ...
+
+
 class Explainer:
-    # TODO: firestore
+    # FIXME: rely on message id is incorrect, use file_id instead
+
+    n_hour_limit = 24
+    n_generations_limit = 25
+
+    async def _explain(self, caption: str, image: Image.Image) -> MemeInfoModel:
+        logger.info("caption: %s \nimage: [%s]", caption, str(image))
+        react = dspy.ReAct(
+            signature=MemeInfoSignature,
+            tools=[dspy.Tool(GoogleSearch().search)],
+            max_iters=5,
+        )
+        meme_image = dspy.Image.from_PIL(image)
+        result: dspy.Prediction = await react.acall(
+            caption=caption,
+            meme_image=meme_image,
+        )
+        meme_info: MemeInfoModel = result.meme_info
+        logger.info("Meme info: %s", str(meme_info))
+        return meme_info
+
+    @cached_property
+    def db(self) -> firestore.Client:
+        return firestore.Client()
+
+    def __check(self, message: Message) -> None:
+        since = datetime.now(timezone.utc) - timedelta(hours=self.n_hour_limit)
+        buckets = self.db.collection("llm_requests").where(
+            filter=FieldFilter("ts", ">=", since)
+        )
+        n_requests = 0
+        for doc in buckets.stream():
+            n_requests += 1
+            message_id = (
+                message.reply_to_message.id
+                if message.reply_to_message is not None
+                else message.message_id
+            )
+            if message_id == doc.to_dict().get("message_id", 0):
+                logger.info("Is explained")
+                raise IsAlreadyExplained()
+            if n_requests >= self.n_generations_limit:
+                logger.info("Too many requests")
+                raise TooManyExplains()
+
+    def __register(self, message_id: str) -> None:
+        self.db.collection("llm_requests").document(message_id).set(
+            {
+                "expiresAt": datetime.now(timezone.utc)
+                + timedelta(hours=self.n_hour_limit),
+                "message_id": message_id,
+            }
+        )
+
+    async def get_image(self, message: Message) -> Image.Image:
+        photo_block = (
+            message.reply_to_message.photo
+            if message.reply_to_message is not None
+            else message.photo
+        )
+        file_record = max(
+            (
+                photo
+                for photo in photo_block
+                if (photo.width < 800 and photo.height < 800)
+            ),
+            key=lambda photo: photo.width,
+        )
+        hfile = await Bot(token=get_token()).get_file(file_record.file_id)
+        buffer = BytesIO()
+        await hfile.download_to_memory(out=buffer)
+        logger.info("Image downloaded: %d bytes", buffer.tell())
+        buffer.seek(0)
+        image = Image.open(buffer)
+        logger.info("Image resolution: %s", repr(image.size))
+        return image
+
+    async def explain(self, message: Message) -> MemeInfoModel:
+        logger.info("Running explain")
+        try:
+            self.__check(message=message)
+        except ExplainerException:
+            raise
+        image = await self.get_image(message=message)
+        original_caption = (
+            message.reply_to_message.caption
+            if message.reply_to_message
+            else message.caption
+        )
+        caption = "" "" if not original_caption else original_caption
+        meme_info = await self._explain(caption=caption, image=image)
+        logger.info(message)
+        self.__register(
+            message_id=(
+                (str(message.reply_to_message.id))
+                if message.reply_to_message
+                else str(message.message_id)
+            )
+        )
+        logger.info("Registered")
+        return meme_info
+
+
+class ExplainSubscriber:
 
     def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
-        self.n_generations_limit = 10
-        self.n_hour_limit = 24
         self.__loop = loop
+        self.explainer = Explainer()
 
     @contextmanager
     def subscription(self) -> Generator[None, None, None]:
@@ -122,93 +232,25 @@ class Explainer:
             ...
         self.__subscriber.close()
 
-    async def _explain(self, caption: str, image: Image.Image) -> MemeInfoModel:
-        react = dspy.ReAct(
-            signature=MemeInfoSignature,
-            tools=[dspy.Tool(GoogleSearch().search)],
-            max_iters=5,
-        )
-        meme_image = dspy.Image.from_PIL(image)
-        result: dspy.Prediction = await react.acall(
-            caption=caption,
-            meme_image=meme_image,
-        )
-        meme_info: MemeInfoModel = result.meme_info
-
-        return meme_info
-
-    @cached_property
-    def db(self) -> firestore.Client:
-        return firestore.Client()
-
-    async def __check(self, message: Message) -> bool:
-        since = datetime.now(timezone.utc) - timedelta(hours=self.n_hour_limit)
-        buckets = self.db.collection("llm_requests").where(
-            filter=FieldFilter("ts", ">=", since)
-        )
-        n_requests = 0
-        for doc in buckets.stream():
-            n_requests += 1
-            assert message.reply_to_message is not None
-            if message.reply_to_message.id == doc.to_dict().get("message_id", 0):
-                await Bot(token=get_token()).send_message(
-                    chat_id=message.chat.id,
-                    reply_to_message_id=message.id,
-                    text="This meme was already explained",
-                )
-                return False
-            if n_requests >= self.n_generations_limit:
-                await Bot(token=get_token()).send_message(
-                    chat_id=message.chat.id,
-                    reply_to_message_id=message.id,
-                    text=f"Too many requests per {self.n_hour_limit} hours",
-                )
-                return False
-        return True
-
-    def __register(self, message: Message) -> None:
-        now = datetime.now(timezone.utc)
-        assert message.reply_to_message is not None
-        bucket_id = f"{message.reply_to_message.id}"
-        bucket_ref = self.db.collection("llm_requests").document(bucket_id)
-        bucket_ref.set(
-            {
-                "expiresAt": now + timedelta(hours=self.n_hour_limit),
-                "message_id": message.reply_to_message.id,
-            }
-        )
-
-    async def get_image(self, message: Message) -> Image.Image:
-        assert message.reply_to_message is not None
-        file_record = max(
-            (
-                photo
-                for photo in message.reply_to_message.photo
-                if (photo.width < 800 and photo.height < 800)
-            ),
-            key=lambda photo: photo.width,
-        )
-        hfile = await Bot(token=get_token()).get_file(file_record.file_id)
-        buffer = BytesIO()
-        await hfile.download_to_memory(out=buffer)
-        logger.info("Image downloaded: %d bytes", buffer.tell())
-        buffer.seek(0)
-        image = Image.open(buffer)
-        logger.info("Image resolution: %s", repr(image.size))
-        return image
-
     async def explain(self, message: Message) -> None:
-        logger.info("Running explain")
-        if not (await self.__check(message=message)):
+        try:
+            meme_info = await self.explainer.explain(message=message)
+        except TooManyExplains:
+            text = f"Sorry, too many explain calls in {Explainer.n_hour_limit} hours. Try again later."
+            await Bot(token=get_token()).send_message(
+                chat_id=message.chat.id,
+                reply_to_message_id=message.id,
+                text=text,
+            )
             return
-        image = await self.get_image(message=message)
-        assert message.reply_to_message is not None
-        caption = (
-            "" ""
-            if not message.reply_to_message.caption
-            else message.reply_to_message.caption
-        )
-        meme_info = await self._explain(caption=caption, image=image)
+        except IsAlreadyExplained:
+            text = "Looks like this meme was already explained."
+            await Bot(token=get_token()).send_message(
+                chat_id=message.chat.id,
+                reply_to_message_id=message.id,
+                text=text,
+            )
+            return
         part_translate = (
             "\n\n" "### Перевод:" "\n" f"{meme_info.ru_translation}"
             if meme_info.lang.upper() != "RU"
@@ -228,14 +270,13 @@ class Explainer:
             "\n\n"
             "### Оценка:"
             "\n"
-            f"{meme_info.meme_score}"
+            f"{meme_info.score}/10"
         )
         logger.info(repr(meme_info))
         logger.info("Going to send to %d", message.chat.id)
         await Bot(token=get_token()).send_message(
             chat_id=message.chat.id, reply_to_message_id=message.id, text=explanation
         )
-        self.__register(message=message)
 
     def pull_message(self, pubsub_msg: PubSubMessage) -> None:
         try:
@@ -246,23 +287,19 @@ class Explainer:
                 coro=self.explain(message),
                 loop=self.__loop,
             )
-            ack_future = pubsub_msg.ack_with_response()
-            try:
-                ack_future.result(timeout=10.0)
-            except AcknowledgeError:
-                logger.error("Acknoledgement failed for msg: %d", message.message_id)
+            pubsub_msg.ack()
         except Exception as exc:
             tb = traceback.format_exc()
             logger.error("%s\n%s", str(exc), tb)
             pubsub_msg.nack()
 
 
-def get_explainer(loop: asyncio.AbstractEventLoop) -> Explainer:
+def get_explainer(loop: asyncio.AbstractEventLoop) -> ExplainSubscriber:
     vertexai.init()
     lm = dspy.LM(
         MODEL_NAME,
         temperature=0.0,
-        max_tokens=16384,
+        max_tokens=32567,
     )
-    dspy.configure(lm=lm)
-    return Explainer(loop=loop)
+    dspy.configure(lm=lm, adapter=dspy.JSONAdapter())
+    return ExplainSubscriber(loop=loop)
