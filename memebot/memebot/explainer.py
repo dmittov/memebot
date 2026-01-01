@@ -98,7 +98,7 @@ class MemeInfoSignature(dspy.Signature):
     meme_info: MemeInfoModel = dspy.OutputField()
 
 
-class ExplainerException: ...
+class ExplainerException(Exception): ...
 
 
 class TooManyExplains(ExplainerException): ...
@@ -236,7 +236,7 @@ class ExplainSubscriber:
         try:
             meme_info = await self.explainer.explain(message=message)
         except TooManyExplains:
-            text = f"Sorry, too many explain calls in {self.n_hour_limit} hours. Try again later."
+            text = f"Sorry, too many explain calls in {Explainer.n_hour_limit} hours. Try again later."
             await Bot(token=get_token()).send_message(
                 chat_id=message.chat.id,
                 reply_to_message_id=message.id,

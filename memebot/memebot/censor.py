@@ -53,7 +53,7 @@ class TimeCensor(AbstractCensor):
         return firestore.Client()
 
     def register(self, message: Message) -> None:
-        # user_id: int, message_id: int, dt: datetime
+        assert message.from_user is not None
         uid = str(message.from_user.id)
         dt = datetime.now(timezone.utc)
         minute = dt.strftime("%Y%m%d%H%M")
@@ -174,7 +174,7 @@ class NewUserCensor(AbstractCensor):
                 f"a score of at least {self.threshold} out of 10 before it "
                 "can be published. "
                 "After that, you’ll be added to the allowlist (for 6 months) and "
-                "can post memes normally.",
+                "can post memes normally."
             ),
         )
 
