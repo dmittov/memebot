@@ -236,6 +236,7 @@ class CensorSubscriber:
             logger.info("Fetching message for a Censor")
             data = json.loads(pubsub_msg.data.decode("utf-8"))
             message = Message.de_json(data=data, bot=None)
+            logger.info("[Censor] Received message: %s", message.to_json())
             future = asyncio.run_coroutine_threadsafe(
                 coro=self.check(message),
                 loop=self.__loop,
