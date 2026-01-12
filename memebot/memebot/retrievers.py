@@ -1,7 +1,7 @@
 import asyncio
+import logging
 from collections.abc import Coroutine
 from datetime import timedelta
-import logging
 from ssl import SSLCertVerificationError
 from typing import Any
 
