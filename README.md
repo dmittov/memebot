@@ -1,6 +1,6 @@
 # MemeBot
 
-![Python Version](https://img.shields.io/badge/python-3.13%2B-blue)
+![Python Version](https://img.shields.io/badge/python-3.14%2B-blue)
 ![Black](https://img.shields.io/badge/code%20style-black-000000)
 ![isort](https://img.shields.io/badge/imports-isort-ef8336)
 ![mypy](https://img.shields.io/badge/mypy-checked-blue)
