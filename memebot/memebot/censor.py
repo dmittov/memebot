@@ -236,10 +236,11 @@ class CensorSubscriber:
             logger.info("Fetching message for a Censor")
             data = json.loads(pubsub_msg.data.decode("utf-8"))
             message = Message.de_json(data=data, bot=None)
-            asyncio.run_coroutine_threadsafe(
+            future = asyncio.run_coroutine_threadsafe(
                 coro=self.check(message),
                 loop=self.__loop,
             )
+            future.result()
             pubsub_msg.ack()
         except Exception as exc:
             tb = traceback.format_exc()
