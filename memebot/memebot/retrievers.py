@@ -1,12 +1,16 @@
 import asyncio
+import logging
 from collections.abc import Coroutine
 from datetime import timedelta
+from ssl import SSLCertVerificationError
 from typing import Any
 
 import httpx
 from markdownify import markdownify
 
 from memebot.config import get_search_api_key, get_search_cx_key
+
+logger = logging.getLogger(__name__)
 
 
 class GoogleSearch:
@@ -46,22 +50,27 @@ class GoogleSearch:
         if k is None:
             k = self.k
         documents = []
-        async with httpx.AsyncClient(
-            follow_redirects=True, timeout=self.timeout
-        ) as client:
-            coroutines = await self._search(client=client, query=query, k=k)
-            for coroutine in asyncio.as_completed(coroutines):
-                try:
-                    html_document = (await coroutine).text
-                    document = markdownify(
-                        html_document,
-                        strip=[
-                            # Don't embed pictures as base64 into text, just ignore them
-                            # to save tokens. Text should be enough.
-                            "img",
-                        ],
-                    )
-                    documents.append(document)
-                except httpx.TimeoutException:
-                    ...
+        try:
+            async with httpx.AsyncClient(
+                follow_redirects=True, timeout=self.timeout
+            ) as client:
+                coroutines = await self._search(client=client, query=query, k=k)
+                for coroutine in asyncio.as_completed(coroutines):
+                    try:
+                        html_document = (await coroutine).text
+                        document = markdownify(
+                            html_document,
+                            strip=[
+                                # Don't embed pictures as base64 into text, just ignore them
+                                # to save tokens. Text should be enough.
+                                "img",
+                            ],
+                        )
+                        documents.append(document)
+                    except (httpx.TimeoutException, SSLCertVerificationError) as exc:
+                        logger.warning("%s", str(exc))
+                        raise
+        # Tool must complete
+        except Exception as exc:
+            logger.error("%s", str(exc))
         return "".join(f"Document:\n{document}\n\n" for document in documents)
