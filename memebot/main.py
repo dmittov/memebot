@@ -16,6 +16,9 @@ from memebot.censor import get_censor
 from memebot.commands import CommandInterface, build_command
 from memebot.config import get_token
 from memebot.explainer import get_explainer
+from memebot.logging_setup import setup_logging
+
+setup_logging()
 
 logger = getLogger(__name__)
 

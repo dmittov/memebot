@@ -1,4 +1,3 @@
-import logging
 import os
 from dataclasses import dataclass
 from functools import cache
@@ -82,9 +81,3 @@ def get_messenger_config() -> MessengerConfig:
 
 ADMINS = {int(uid) for uid in os.getenv("ADMIN_IDS", "").split(",") if uid.strip()}
 MODEL_NAME = os.getenv("MODEL_NAME", "no_model")
-
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
-logging.basicConfig(
-    level=getattr(logging, LOG_LEVEL, logging.INFO),
-    format="%(levelname)s:%(message)s",
-)
