@@ -70,7 +70,7 @@ class GoogleSearch:
                     except (httpx.TimeoutException, SSLCertVerificationError) as exc:
                         logger.warning("%s", str(exc))
                         raise
-        # Tool must complete
         except Exception as exc:
             logger.error("%s", str(exc))
+            raise exc
         return "".join(f"Document:\n{document}\n\n" for document in documents)
