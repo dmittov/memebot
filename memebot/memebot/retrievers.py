@@ -72,5 +72,5 @@ class GoogleSearch:
                         raise
         except Exception as exc:
             logger.error("%s", str(exc))
-            raise exc
+            raise
         return "".join(f"Document:\n{document}\n\n" for document in documents)
