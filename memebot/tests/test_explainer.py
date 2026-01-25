@@ -147,8 +147,12 @@ class TestExplainSubscriber:
     async def test_pull_message(
         self, mocker: MockerFixture, explain_message: Message
     ) -> None:
-        explainer = ExplainSubscriber(loop=asyncio.get_running_loop())
-        mock_explain = mocker.patch("memebot.explainer.ExplainSubscriber.explain")
+        loop = asyncio.get_running_loop()
+        explainer = ExplainSubscriber(loop=loop)
+        mock_explain = mocker.patch(
+            "memebot.explainer.ExplainSubscriber.explain",
+            new_callable=mocker.AsyncMock,
+        )
 
         _raw_proto_pubbsub_message = gapic_types.PubsubMessage.pb()
         msg_pb = _raw_proto_pubbsub_message(
@@ -165,5 +169,6 @@ class TestExplainSubscriber:
             delivery_attempt=0,
             request_queue=queue.Queue(),
         )
-        explainer.pull_message(pubsub_message)
+        await loop.run_in_executor(None, explainer.pull_message, pubsub_message)
+        # explainer.pull_message(pubsub_message)
         assert mock_explain.call_count == 1
