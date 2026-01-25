@@ -131,6 +131,9 @@ class TooManyExplains(ExplainerException): ...
 class IsAlreadyExplained(ExplainerException): ...
 
 
+class NoImage(ExplainerException): ...
+
+
 class Explainer:
     # FIXME: rely on message id is incorrect, use file_id instead
 
@@ -215,7 +218,10 @@ class Explainer:
             self.__check(message=message)
         except ExplainerException:
             raise
-        image = await self.get_image(message=message)
+        try:
+            image = await self.get_image(message=message)
+        except Exception:
+            raise NoImage()
         original_caption = (
             message.reply_to_message.caption
             if message.reply_to_message
@@ -261,6 +267,14 @@ class ExplainSubscriber:
             meme_info = await self.explainer.explain(message=message)
         except TooManyExplains:
             text = f"Sorry, too many explain calls in {Explainer.n_hour_limit} hours. Try again later."
+            await Bot(token=get_token()).send_message(
+                chat_id=message.chat.id,
+                reply_to_message_id=message.id,
+                text=text,
+            )
+            return
+        except NoImage:
+            text = "There is no image to explain"
             await Bot(token=get_token()).send_message(
                 chat_id=message.chat.id,
                 reply_to_message_id=message.id,
