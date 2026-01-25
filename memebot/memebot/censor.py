@@ -17,6 +17,7 @@ from google.cloud.firestore import FieldFilter, Increment
 from google.cloud.pubsub_v1 import SubscriberClient
 from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
 from telegram import Bot, Message
+from telegram.error import Forbidden
 
 from memebot.config import get_channel_id, get_messenger_config, get_token
 from memebot.explainer import Explainer
@@ -242,6 +243,10 @@ class CensorSubscriber:
                 loop=self.__loop,
             )
             future.result()
+            pubsub_msg.ack()
+        except Forbidden as exc:
+            tb = traceback.format_exc()
+            logger.error("Forbidden: %s", tb)
             pubsub_msg.ack()
         except Exception as exc:
             tb = traceback.format_exc()
