@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from telegram import Bot, Message, Update
@@ -41,3 +42,26 @@ class TestWebhook:
         response = client.post(self.link, json=update.to_dict())
         assert response.status_code == 200
         assert response.text == "OK"
+
+
+@pytest.mark.asyncio
+async def test_webhook_handles_reaction_update(client, mocker):
+    """Test that webhook processes message_reaction updates."""
+    mock_handler = mocker.patch("main.handle_reaction_update")
+
+    reaction_data = {
+        "update_id": 12345,
+        "message_reaction": {
+            "chat": {"id": -100123456, "type": "channel"},
+            "message_id": 42,
+            "user": {"id": 789, "first_name": "Test", "is_bot": False},
+            "date": 1705312200,
+            "old_reaction": [],
+            "new_reaction": [{"type": "emoji", "emoji": "👍"}],
+        },
+    }
+
+    response = client.post("/webhook", json=reaction_data)
+
+    assert response.status_code == 200
+    mock_handler.assert_called_once()
