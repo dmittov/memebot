@@ -5,9 +5,25 @@ from functools import cached_property
 from logging import getLogger
 
 from google.cloud import firestore
-from telegram import Chat, User
+from telegram import Chat, ReactionType, ReactionTypeCustomEmoji, ReactionTypeEmoji, User
 
 logger = getLogger(__name__)
+
+
+def extract_emoji(reaction: ReactionType) -> str:
+    """Extract emoji string from a ReactionType object.
+
+    Args:
+        reaction: Telegram ReactionType object
+
+    Returns:
+        Emoji string or "custom:{id}" for custom emoji
+    """
+    if isinstance(reaction, ReactionTypeEmoji):
+        return reaction.emoji
+    if isinstance(reaction, ReactionTypeCustomEmoji):
+        return f"custom:{reaction.custom_emoji_id}"
+    return str(reaction)
 
 
 class ReactionLogger:

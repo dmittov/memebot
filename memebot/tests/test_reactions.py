@@ -64,3 +64,15 @@ class TestReactionLogger:
         assert data["username"] == "testuser"
         assert data["added"] == []
         assert data["removed"] == ["👍"]
+
+
+def test_extract_emoji_from_reaction_type():
+    """Test extracting emoji string from ReactionType objects."""
+    from memebot.reactions import extract_emoji
+    from telegram import ReactionTypeEmoji, ReactionTypeCustomEmoji
+
+    emoji_reaction = ReactionTypeEmoji(emoji="👍")
+    custom_reaction = ReactionTypeCustomEmoji(custom_emoji_id="12345")
+
+    assert extract_emoji(emoji_reaction) == "👍"
+    assert extract_emoji(custom_reaction) == "custom:12345"
