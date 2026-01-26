@@ -43,25 +43,26 @@ class TestWebhook:
         assert response.status_code == 200
         assert response.text == "OK"
 
+    @pytest.mark.asyncio
+    async def test_webhook_handles_reaction_update(
+        self, client: TestClient, mocker: MockerFixture
+    ) -> None:
+        """Test that webhook processes message_reaction updates."""
+        mock_handler = mocker.patch("main.handle_reaction_update")
 
-@pytest.mark.asyncio
-async def test_webhook_handles_reaction_update(client, mocker):
-    """Test that webhook processes message_reaction updates."""
-    mock_handler = mocker.patch("main.handle_reaction_update")
+        reaction_data = {
+            "update_id": 12345,
+            "message_reaction": {
+                "chat": {"id": -100123456, "type": "channel"},
+                "message_id": 42,
+                "user": {"id": 789, "first_name": "Test", "is_bot": False},
+                "date": 1705312200,
+                "old_reaction": [],
+                "new_reaction": [{"type": "emoji", "emoji": "👍"}],
+            },
+        }
 
-    reaction_data = {
-        "update_id": 12345,
-        "message_reaction": {
-            "chat": {"id": -100123456, "type": "channel"},
-            "message_id": 42,
-            "user": {"id": 789, "first_name": "Test", "is_bot": False},
-            "date": 1705312200,
-            "old_reaction": [],
-            "new_reaction": [{"type": "emoji", "emoji": "👍"}],
-        },
-    }
+        response = client.post("/webhook", json=reaction_data)
 
-    response = client.post("/webhook", json=reaction_data)
-
-    assert response.status_code == 200
-    mock_handler.assert_called_once()
+        assert response.status_code == 200
+        mock_handler.assert_called_once()
