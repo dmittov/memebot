@@ -5,7 +5,14 @@ from functools import cached_property
 from logging import getLogger
 
 from google.cloud import firestore
-from telegram import Chat, ReactionType, ReactionTypeCustomEmoji, ReactionTypeEmoji, User
+from telegram import (
+    Chat,
+    MessageReactionUpdated,
+    ReactionType,
+    ReactionTypeCustomEmoji,
+    ReactionTypeEmoji,
+    User,
+)
 
 logger = getLogger(__name__)
 
@@ -83,3 +90,35 @@ class ReactionLogger:
             "expiresAt": date + self.firestore_ttl,
         }
         self.db.collection(self.collection_name).document().set(data)
+
+
+# Module-level singleton
+_reaction_logger: ReactionLogger | None = None
+
+
+def get_reaction_logger() -> ReactionLogger:
+    """Get or create the singleton ReactionLogger instance."""
+    global _reaction_logger
+    if _reaction_logger is None:
+        _reaction_logger = ReactionLogger()
+    return _reaction_logger
+
+
+async def handle_reaction_update(update: MessageReactionUpdated) -> None:
+    """Handle a MessageReactionUpdated from Telegram webhook.
+
+    Args:
+        update: The reaction update from Telegram
+    """
+    old_reactions = [extract_emoji(r) for r in update.old_reaction]
+    new_reactions = [extract_emoji(r) for r in update.new_reaction]
+
+    logger = get_reaction_logger()
+    logger.log_reaction(
+        user=update.user,
+        chat=update.chat,
+        message_id=update.message_id,
+        old_reactions=old_reactions,
+        new_reactions=new_reactions,
+        date=update.date,
+    )
