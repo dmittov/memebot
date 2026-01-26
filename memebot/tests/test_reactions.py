@@ -1,4 +1,3 @@
-# tests/test_reactions.py
 from datetime import datetime, timezone
 from unittest.mock import patch
 
@@ -23,6 +22,7 @@ class TestReactionLogger:
 
     @pytest.fixture
     def reaction_logger(self, mock_firestore):
+        _ = mock_firestore
         from memebot.reactions import ReactionLogger
 
         return ReactionLogger()
