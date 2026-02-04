@@ -14,6 +14,10 @@
 - `hypercorn -b :8000 main:app` to run the API locally (matches `app.yaml` entrypoint).
 - `pytest` to run the test suite.
 
+## Python path
+- mamba environment is used for this project
+- `which python` to get path to the proper python interpreter
+
 ## Coding Style & Naming Conventions
 - Python style: 4-space indentation, type hints where practical, async-aware code.
 - Formatters: `black` (and `isort` with the Black profile). Lint with `flake8`; type-check with `mypy`.

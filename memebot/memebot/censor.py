@@ -16,13 +16,46 @@ from google.cloud import firestore
 from google.cloud.firestore import FieldFilter, Increment
 from google.cloud.pubsub_v1 import SubscriberClient
 from google.cloud.pubsub_v1.subscriber.message import Message as PubSubMessage
-from telegram import Bot, Message
+from telegram import Bot, Message, User
 from telegram.error import Forbidden
 
 from memebot.config import get_channel_id, get_messenger_config, get_token
 from memebot.explainer import Explainer
 
 logger = getLogger(__name__)
+
+
+def build_sender_attribution(user: User) -> str:
+    """Build sender attribution string from user information.
+
+    Args:
+        user: Telegram User object
+
+    Returns:
+        Attribution string in format "sent by @username" or "sent by Name"
+    """
+    if user.username:
+        return f"sent by @{user.username}"
+    elif user.last_name:
+        return f"sent by {user.first_name} {user.last_name}"
+    else:
+        return f"sent by {user.first_name}"
+
+
+def build_caption_with_attribution(original_caption: str | None, user: User) -> str:
+    """Build caption with sender attribution appended.
+
+    Args:
+        original_caption: Existing message caption (or None)
+        user: Telegram User object
+
+    Returns:
+        Caption with attribution appended, or just attribution if no original caption
+    """
+    attribution = build_sender_attribution(user)
+    if original_caption and original_caption.strip():
+        return f"{original_caption}\n\n{attribution}"
+    return attribution
 
 
 @dataclass(frozen=True)
@@ -262,11 +295,27 @@ class CensorSubscriber:
                 text=result.reason,
             )
         if result.is_allowed:
-            response = await bot.forward_message(
-                chat_id=get_channel_id(),
-                from_chat_id=message.chat.id,
-                message_id=message.message_id,
-            )
+            # Check if this is a forwarded message (has forward_origin)
+            if message.forward_origin is not None:
+                # For forwarded messages, use copy_message with attribution
+                # to show who sent it to the bot instead of the original channel
+                assert message.from_user is not None
+                caption = build_caption_with_attribution(
+                    message.caption, message.from_user
+                )
+                response = await bot.copy_message(
+                    chat_id=get_channel_id(),
+                    from_chat_id=message.chat.id,
+                    message_id=message.message_id,
+                    caption=caption,
+                )
+            else:
+                # For regular messages, use forward_message as before
+                response = await bot.forward_message(
+                    chat_id=get_channel_id(),
+                    from_chat_id=message.chat.id,
+                    message_id=message.message_id,
+                )
             logger.info(response)
 
 
