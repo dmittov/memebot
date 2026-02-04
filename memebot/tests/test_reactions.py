@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from unittest.mock import patch
 
 import pytest
-from telegram import Chat, ReactionTypeEmoji, User
+from telegram import Chat, ReactionCount, ReactionTypeEmoji, User
 
 
 @pytest.fixture
@@ -72,6 +72,24 @@ class TestReactionLogger:
         assert data["added"] == []
         assert data["removed"] == ["👍"]
 
+    def test_log_reaction_count(self, reaction_logger, mock_firestore):
+        """Test logging reaction counts."""
+        chat = Chat(id=-100123456, type="channel")
+        reactions = [ReactionCount(type=ReactionTypeEmoji(emoji="🔥"), total_count=3)]
+
+        reaction_logger.log_reaction_count(
+            chat=chat,
+            message_id=99,
+            reactions=reactions,
+            date=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+        )
+
+        call_args = mock_firestore.collection().document().set.call_args
+        data = call_args[0][0]
+
+        assert data["message_id"] == 99
+        assert data["counts"] == [{"reaction": "🔥", "count": 3}]
+
 
 def test_extract_emoji_from_reaction_type():
     """Test extracting emoji string from ReactionType objects."""
@@ -112,3 +130,28 @@ async def test_handle_reaction_update(mock_firestore):
         assert call_kwargs["user"] == user
         assert call_kwargs["message_id"] == 123
         assert call_kwargs["new_reactions"] == ["🔥"]
+
+
+@pytest.mark.asyncio
+async def test_handle_reaction_count_update(mock_firestore):
+    """Test handling a full MessageReactionCountUpdated."""
+    from memebot.reactions import handle_reaction_count_update
+    from telegram import MessageReactionCountUpdated, Chat
+
+    chat = Chat(id=-100999, type="channel")
+    reactions = [ReactionCount(type=ReactionTypeEmoji(emoji="🔥"), total_count=2)]
+
+    update = MessageReactionCountUpdated(
+        chat=chat,
+        message_id=124,
+        date=datetime(2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc),
+        reactions=reactions,
+    )
+
+    with patch("memebot.reactions.ReactionLogger") as MockLogger:
+        mock_instance = MockLogger.return_value
+        await handle_reaction_count_update(update)
+
+        mock_instance.log_reaction_count.assert_called_once()
+        call_kwargs = mock_instance.log_reaction_count.call_args[1]
+        assert call_kwargs["message_id"] == 124

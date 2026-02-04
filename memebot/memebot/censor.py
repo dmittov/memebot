@@ -246,7 +246,7 @@ class CensorSubscriber:
             pubsub_msg.ack()
         except Forbidden as exc:
             tb = traceback.format_exc()
-            logger.error("Forbidden: %s", tb)
+            logger.error("Forbidden [user %s]: %s", str(message.from_user.username), tb)
             pubsub_msg.ack()
         except Exception as exc:
             tb = traceback.format_exc()

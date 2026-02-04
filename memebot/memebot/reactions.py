@@ -8,7 +8,9 @@ from google.cloud import firestore
 from telegram import (
     Chat,
     MessageReactionUpdated,
+    MessageReactionCountUpdated,
     ReactionType,
+    ReactionCount,
     ReactionTypeCustomEmoji,
     ReactionTypeEmoji,
     User,
@@ -31,6 +33,14 @@ def extract_emoji(reaction: ReactionType) -> str:
     if isinstance(reaction, ReactionTypeCustomEmoji):
         return f"custom:{reaction.custom_emoji_id}"
     return str(reaction)
+
+
+def reaction_count_to_dict(reaction_count: ReactionCount) -> dict[str, int | str]:
+    """Convert a ReactionCount object to a serializable dict."""
+    return {
+        "reaction": extract_emoji(reaction_count.type),
+        "count": reaction_count.total_count,
+    }
 
 
 class ReactionLogger:
@@ -91,6 +101,32 @@ class ReactionLogger:
         }
         self.db.collection(self.collection_name).document().set(data)
 
+    def log_reaction_count(
+        self,
+        chat: Chat,
+        message_id: int,
+        reactions: list[ReactionCount],
+        date: datetime,
+    ) -> None:
+        """Log reaction counts to Firestore and Cloud Logging."""
+        counts = [reaction_count_to_dict(r) for r in reactions]
+
+        logger.info(
+            "ReactionCount: message=%s counts=%s",
+            message_id,
+            counts,
+        )
+
+        data = {
+            "chat_id": str(chat.id),
+            "message_id": message_id,
+            "counts": counts,
+            "timestamp": date,
+            "expiresAt": date + self.firestore_ttl,
+            "event_type": "count",
+        }
+        self.db.collection(self.collection_name).document().set(data)
+
 
 # Module-level singleton
 _reaction_logger: ReactionLogger | None = None
@@ -120,5 +156,16 @@ async def handle_reaction_update(update: MessageReactionUpdated) -> None:
         message_id=update.message_id,
         old_reactions=old_reactions,
         new_reactions=new_reactions,
+        date=update.date,
+    )
+
+
+async def handle_reaction_count_update(update: MessageReactionCountUpdated) -> None:
+    """Handle a MessageReactionCountUpdated from Telegram webhook."""
+    logger = get_reaction_logger()
+    logger.log_reaction_count(
+        chat=update.chat,
+        message_id=update.message_id,
+        reactions=list(update.reactions),
         date=update.date,
     )

@@ -17,7 +17,7 @@ from memebot.commands import CommandInterface, build_command
 from memebot.config import get_token
 from memebot.explainer import get_explainer
 from memebot.logging_setup import setup_logging
-from memebot.reactions import handle_reaction_update
+from memebot.reactions import handle_reaction_count_update, handle_reaction_update
 
 setup_logging()
 
@@ -90,6 +90,7 @@ async def index() -> Response:
 async def telegram_webhook(request: Request) -> Response:
     try:
         data = await request.json()
+        logger.info(f"Message: %s", str(data))
         update = Update.de_json(data=data, bot=None)
     except Exception:  # noqa: BLE001
         return Response(
@@ -103,6 +104,15 @@ async def telegram_webhook(request: Request) -> Response:
         except Exception as exc:
             tb = traceback.format_exc()
             logger.error("Reaction handling error: %s\n%s", str(exc), tb)
+        return Response(content="OK", status_code=HTTPStatus.OK)
+
+    # Handle message reaction counts (anonymous channel reactions)
+    if update.message_reaction_count:
+        try:
+            await handle_reaction_count_update(update.message_reaction_count)
+        except Exception as exc:
+            tb = traceback.format_exc()
+            logger.error("Reaction count handling error: %s\n%s", str(exc), tb)
         return Response(content="OK", status_code=HTTPStatus.OK)
 
     # Handle regular messages
