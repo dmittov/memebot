@@ -17,7 +17,7 @@ from memebot.commands import CommandInterface, build_command
 from memebot.config import get_token
 from memebot.explainer import get_explainer
 from memebot.logging_setup import setup_logging
-from memebot.reactions import handle_reaction_count_update, handle_reaction_update
+from memebot.reactions import handle_reaction_count_update
 
 setup_logging()
 
@@ -44,7 +44,6 @@ async def set_webhook() -> None:
             "business_message",
             "edited_business_message",
             "deleted_business_messages",
-            "message_reaction",
             "message_reaction_count",
             "inline_query",
             "chosen_inline_result",
@@ -96,15 +95,6 @@ async def telegram_webhook(request: Request) -> Response:
         return Response(
             content="ignored, invalid update format", status_code=HTTPStatus.OK
         )
-
-    # Handle message reactions
-    if update.message_reaction:
-        try:
-            await handle_reaction_update(update.message_reaction)
-        except Exception as exc:
-            tb = traceback.format_exc()
-            logger.error("Reaction handling error: %s\n%s", str(exc), tb)
-        return Response(content="OK", status_code=HTTPStatus.OK)
 
     # Handle message reaction counts (anonymous channel reactions)
     if update.message_reaction_count:
