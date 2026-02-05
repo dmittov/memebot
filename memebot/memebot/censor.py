@@ -298,7 +298,11 @@ class CensorSubscriber:
         if result.is_allowed:
             # Determine the author username
             assert message.from_user is not None
-            author_username = message.from_user.username or message.from_user.first_name
+            author_username = (
+                message.from_user.username
+                or message.from_user.first_name
+                or str(message.from_user.id)
+            )
 
             # Check if this is a forwarded message (has forward_origin)
             if message.forward_origin is not None:
@@ -324,12 +328,15 @@ class CensorSubscriber:
             logger.info(response)
 
             # Log the message author for emoji statistics
-            author_logger = get_message_author_logger()
-            author_logger.log_message_author(
-                channel_message_id=response.message_id,
-                username=author_username,
-                timestamp=response.date,
-            )
+            try:
+                author_logger = get_message_author_logger()
+                author_logger.log_message_author(
+                    channel_message_id=response.message_id,
+                    username=author_username,
+                    timestamp=response.date,
+                )
+            except Exception as exc:
+                logger.error("Failed to log message author: %s", str(exc))
 
 
 def get_censor(loop: asyncio.AbstractEventLoop) -> CensorSubscriber:

@@ -264,6 +264,60 @@ async def test_censor_logs_author_for_forwarded_message():
 
 
 @pytest.mark.asyncio
+async def test_censor_logs_author_for_user_without_username_or_firstname():
+    """Test that CensorSubscriber uses user ID when username and first_name are None."""
+    with patch("memebot.censor.get_message_author_logger") as mock_get_logger, \
+         patch("memebot.censor.Bot") as mock_bot_class, \
+         patch("memebot.censor.DefaultCensor") as mock_censor_class:
+
+        # Setup mocks
+        mock_author_logger = MagicMock()
+        mock_get_logger.return_value = mock_author_logger
+
+        mock_bot = AsyncMock()
+        mock_bot_class.return_value = mock_bot
+
+        mock_censor = AsyncMock()
+        mock_censor.check.return_value = MagicMock(is_allowed=True, reason="")
+        mock_censor_class.return_value = mock_censor
+
+        # Mock response from forward_message (channel post)
+        channel_message = Message(
+            message_id=77777,
+            date=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            chat=Chat(id=-1001234567, type="channel"),
+        )
+        mock_bot.forward_message.return_value = channel_message
+
+        # Create test message with user that has NO username and NO first_name
+        # Only user ID is available
+        user = User(id=99999, first_name=None, username=None, is_bot=False)
+        chat = Chat(id=99999, type="private")
+
+        message = Message(
+            message_id=3,
+            date=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            chat=chat,
+            from_user=user,
+            forward_origin=None,
+        )
+
+        # Run check
+        from memebot.censor import CensorSubscriber
+        import asyncio
+
+        subscriber = CensorSubscriber(loop=asyncio.get_event_loop())
+        await subscriber.check(message)
+
+        # Verify author was logged with user ID as fallback
+        mock_author_logger.log_message_author.assert_called_once_with(
+            channel_message_id=77777,
+            username="99999",  # Should fall back to user ID
+            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+        )
+
+
+@pytest.mark.asyncio
 async def test_censor_logs_author_for_regular_message():
     """Test that CensorSubscriber logs message author when posting regular message."""
     with patch("memebot.censor.get_message_author_logger") as mock_get_logger, \
