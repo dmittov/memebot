@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Rules - Terminal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0e0a;
+            font-family: 'Courier New', Courier, monospace;
+            color: #33ff33;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .terminal {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #0d120d;
+            border: 2px solid #33ff33;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(51, 255, 51, 0.3);
+            overflow: hidden;
+        }
+
+        .terminal-header {
+            background: #1a1f1a;
+            padding: 10px 20px;
+            border-bottom: 1px solid #33ff33;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .terminal-button {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .terminal-button.close { background: #ff5555; }
+        .terminal-button.minimize { background: #ffff55; }
+        .terminal-button.maximize { background: #55ff55; }
+
+        .terminal-title {
+            margin-left: 10px;
+            color: #33ff33;
+            font-weight: bold;
+        }
+
+        .terminal-body {
+            padding: 20px;
+        }
+
+        .prompt {
+            color: #55ff55;
+            margin-bottom: 10px;
+        }
+
+        .prompt::before {
+            content: "$ ";
+            color: #33ff33;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #1a4d1a;
+            padding-bottom: 10px;
+        }
+
+        .tab {
+            background: transparent;
+            border: 1px solid #33ff33;
+            color: #33ff33;
+            padding: 8px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            background: rgba(51, 255, 51, 0.1);
+        }
+
+        .tab.active {
+            background: #33ff33;
+            color: #0d120d;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        h1 {
+            color: #55ff55;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(51, 255, 51, 0.5);
+        }
+
+        h2 {
+            color: #55ff55;
+            font-size: 18px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        h3 {
+            color: #99ff99;
+            font-size: 16px;
+            margin-top: 15px;
+            margin-bottom: 8px;
+        }
+
+        p {
+            color: #33ff33;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        ul, ol {
+            color: #33ff33;
+            margin-left: 20px;
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+
+        li {
+            margin-bottom: 5px;
+        }
+
+        strong {
+            color: #55ff55;
+        }
+
+        code {
+            color: #ffff55;
+            background: rgba(51, 255, 51, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background: #33ff33;
+            animation: blink 1s infinite;
+            margin-left: 4px;
+        }
+
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+
+        .section {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal">
+        <div class="terminal-header">
+            <span class="terminal-button close"></span>
+            <span class="terminal-button minimize"></span>
+            <span class="terminal-button maximize"></span>
+            <span class="terminal-title">bot_rules.sh</span>
+        </div>
+        <div class="terminal-body">
+            <div class="prompt">cat /etc/bot/rules.txt</div>
+
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('ru')">RU</button>
+                <button class="tab" onclick="switchTab('de')">DE</button>
+            </div>
+
+            <!-- Russian Content -->
+            <div id="ru-content" class="tab-content active">
+                <h1>ПРАВИЛА ИСПОЛЬЗОВАНИЯ БОТА<span class="cursor"></span></h1>
+
+                <div class="section">
+                    <h2>Основные возможности</h2>
+                    <p>Этот бот позволяет публиковать мемы и изображения в канал через личные сообщения.</p>
+                </div>
+
+                <div class="section">
+                    <h2>Как использовать бота</h2>
+
+                    <h3>1. Отправка мемов в канал</h3>
+                    <p><strong>Просто отправьте изображение боту в личные сообщения</strong> — бот автоматически опубликует его в канале.</p>
+                    <p>Поддерживаемые типы контента:</p>
+                    <ul>
+                        <li>Фотографии</li>
+                        <li>Изображения</li>
+                        <li>Медиа-файлы с подписями</li>
+                    </ul>
+
+                    <h3>2. Доступные команды</h3>
+
+                    <h3><code>/start</code> или <code>/help</code></h3>
+                    <p>Показывает краткую справку по использованию бота.</p>
+
+                    <h3><code>/explain</code></h3>
+                    <p>Используется в групповом чате для обсуждения постов из канала:</p>
+                    <ul>
+                        <li>Отправьте команду <code>/explain</code> в ответ на сообщение с фото из канала</li>
+                        <li>Бот обработает запрос на объяснение/обсуждение изображения</li>
+                    </ul>
+
+                    <h3>3. Ограничения</h3>
+                    <p><strong>Лимит публикаций:</strong></p>
+                    <ul>
+                        <li>Каждый пользователь может опубликовать <strong>максимум 2 мема в течение 24 часов</strong></li>
+                        <li>Это ограничение помогает поддерживать разнообразие контента в канале</li>
+                    </ul>
+                    <p><strong>Что происходит при превышении лимита:</strong></p>
+                    <ul>
+                        <li>Бот откажет в публикации</li>
+                        <li>Сообщит о причине отказа</li>
+                        <li>Укажет, когда можно будет отправить следующий мем</li>
+                    </ul>
+
+                    <h3>4. Статистика эмодзи</h3>
+                    <p>Доступна веб-страница со статистикой популярности постов по реакциям:</p>
+                    <ul>
+                        <li>Показывает топ-10 пользователей по количеству полученных реакций</li>
+                        <li>Обновляется автоматически</li>
+                        <li>Учитываются все эмодзи-реакции на посты в канале</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <h2>Советы по использованию</h2>
+                    <ol>
+                        <li><strong>Качество важнее количества</strong> — выбирайте лучшие мемы для публикации</li>
+                        <li><strong>Используйте подписи</strong> — добавляйте контекст или шутки к изображениям</li>
+                        <li><strong>Следите за лимитами</strong> — планируйте публикации заранее</li>
+                        <li><strong>Проверяйте контент</strong> — убедитесь, что изображение корректно отображается</li>
+                    </ol>
+                </div>
+
+                <div class="section">
+                    <h2>Вопросы и поддержка</h2>
+                    <p>Если у вас возникли вопросы или проблемы с ботом:</p>
+                    <ul>
+                        <li>Используйте команду <code>/help</code> для базовой справки</li>
+                        <li>Проверьте, не превышен ли лимит публикаций</li>
+                        <li>Убедитесь, что отправляете контент в <strong>личные сообщения</strong> боту, а не в группу</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- German Content -->
+            <div id="de-content" class="tab-content">
+                <h1>BOT-NUTZUNGSREGELN<span class="cursor"></span></h1>
+
+                <div class="section">
+                    <h2>Hauptfunktionen</h2>
+                    <p>Dieser Bot ermöglicht es, Memes und Bilder über private Nachrichten im Kanal zu veröffentlichen.</p>
+                </div>
+
+                <div class="section">
+                    <h2>Wie man den Bot benutzt</h2>
+
+                    <h3>1. Memes in den Kanal senden</h3>
+                    <p><strong>Senden Sie einfach ein Bild an den Bot in privaten Nachrichten</strong> — der Bot wird es automatisch im Kanal veröffentlichen.</p>
+                    <p>Unterstützte Inhaltstypen:</p>
+                    <ul>
+                        <li>Fotos</li>
+                        <li>Bilder</li>
+                        <li>Mediendateien mit Bildunterschriften</li>
+                    </ul>
+
+                    <h3>2. Verfügbare Befehle</h3>
+
+                    <h3><code>/start</code> oder <code>/help</code></h3>
+                    <p>Zeigt eine kurze Anleitung zur Nutzung des Bots.</p>
+
+                    <h3><code>/explain</code></h3>
+                    <p>Wird im Gruppenchat verwendet, um Kanalbeiträge zu diskutieren:</p>
+                    <ul>
+                        <li>Senden Sie den Befehl <code>/explain</code> als Antwort auf eine Nachricht mit einem Foto aus dem Kanal</li>
+                        <li>Der Bot verarbeitet die Anfrage zur Erklärung/Diskussion des Bildes</li>
+                    </ul>
+
+                    <h3>3. Einschränkungen</h3>
+                    <p><strong>Veröffentlichungslimit:</strong></p>
+                    <ul>
+                        <li>Jeder Benutzer kann <strong>maximal 2 Memes innerhalb von 24 Stunden</strong> veröffentlichen</li>
+                        <li>Diese Beschränkung hilft, die Vielfalt der Inhalte im Kanal zu erhalten</li>
+                    </ul>
+                    <p><strong>Was passiert bei Überschreitung des Limits:</strong></p>
+                    <ul>
+                        <li>Der Bot lehnt die Veröffentlichung ab</li>
+                        <li>Informiert über den Grund der Ablehnung</li>
+                        <li>Gibt an, wann das nächste Meme gesendet werden kann</li>
+                    </ul>
+
+                    <h3>4. Emoji-Statistik</h3>
+                    <p>Eine Webseite mit Statistiken zur Beliebtheit von Beiträgen basierend auf Reaktionen ist verfügbar:</p>
+                    <ul>
+                        <li>Zeigt die Top-10-Benutzer nach Anzahl der erhaltenen Reaktionen</li>
+                        <li>Aktualisiert sich automatisch</li>
+                        <li>Berücksichtigt alle Emoji-Reaktionen auf Kanalbeiträge</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <h2>Nutzungstipps</h2>
+                    <ol>
+                        <li><strong>Qualität vor Quantität</strong> — wählen Sie die besten Memes zur Veröffentlichung aus</li>
+                        <li><strong>Verwenden Sie Bildunterschriften</strong> — fügen Sie Kontext oder Witze zu den Bildern hinzu</li>
+                        <li><strong>Beachten Sie die Limits</strong> — planen Sie Ihre Veröffentlichungen im Voraus</li>
+                        <li><strong>Überprüfen Sie den Inhalt</strong> — stellen Sie sicher, dass das Bild korrekt angezeigt wird</li>
+                    </ol>
+                </div>
+
+                <div class="section">
+                    <h2>Fragen und Support</h2>
+                    <p>Wenn Sie Fragen oder Probleme mit dem Bot haben:</p>
+                    <ul>
+                        <li>Verwenden Sie den Befehl <code>/help</code> für grundlegende Informationen</li>
+                        <li>Überprüfen Sie, ob das Veröffentlichungslimit nicht überschritten wurde</li>
+                        <li>Stellen Sie sicher, dass Sie Inhalte in <strong>privaten Nachrichten</strong> an den Bot senden, nicht in die Gruppe</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(lang) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab content
+            document.getElementById(lang + '-content').classList.add('active');
+
+            // Mark selected tab as active
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>

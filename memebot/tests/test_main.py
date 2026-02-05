@@ -150,3 +150,23 @@ async def test_emoji_endpoint_handles_errors():
 
         assert response.status_code == 503
         assert response.text == "Service temporarily unavailable"
+
+
+@pytest.mark.asyncio
+async def test_rules_endpoint_returns_html():
+    """Test that /rules endpoint returns HTML page."""
+    from httpx import AsyncClient, ASGITransport
+    from main import app
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/rules")
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+
+    # Check for key content in both languages
+    content = response.text
+    assert "BOT-NUTZUNGSREGELN" in content  # German title
+    assert "ПРАВИЛА ИСПОЛЬЗОВАНИЯ БОТА" in content  # Russian title
+    assert "class=\"tab\"" in content  # Tab elements exist
+    assert "switchTab" in content  # JavaScript function exists

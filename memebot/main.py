@@ -113,8 +113,9 @@ async def emoji_stats(request: Request, format: str = "html") -> HTMLResponse | 
 
         # Return HTML by default
         return templates.TemplateResponse(
-            "emoji_stats.html",
-            {"request": request, "stats": data}
+            request=request,
+            name="emoji_stats.html",
+            context={"stats": data}
         )
     except Exception as exc:
         logger.error("Failed to get emoji statistics: %s", str(exc))
@@ -122,6 +123,16 @@ async def emoji_stats(request: Request, format: str = "html") -> HTMLResponse | 
             content="Service temporarily unavailable",
             status_code=HTTPStatus.SERVICE_UNAVAILABLE,
         )
+
+
+@app.get("/rules")
+async def rules(request: Request) -> HTMLResponse:
+    """Display bot usage rules in Russian and German.
+
+    Returns:
+        HTML page with terminal-styled rules and language tabs
+    """
+    return templates.TemplateResponse(request=request, name="rules.html")
 
 
 @app.post("/webhook")
