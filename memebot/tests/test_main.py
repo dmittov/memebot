@@ -45,25 +45,38 @@ class TestWebhook:
 
     @pytest.mark.asyncio
     async def test_webhook_handles_reaction_count_update(
-        self, client: TestClient, mocker: MockerFixture
+        self, client: TestClient
     ) -> None:
         """Test that webhook processes message_reaction_count updates."""
-        mock_handler = mocker.patch("main.handle_reaction_count_update")
+        from telegram import Chat, MessageReactionCountUpdated, ReactionCount, ReactionTypeEmoji
+        from datetime import datetime, timezone
+        from unittest.mock import patch
 
-        reaction_data = {
-            "update_id": 12346,
-            "message_reaction_count": {
-                "chat": {"id": -100123456, "type": "channel"},
-                "message_id": 43,
-                "date": 1705312201,
-                "reactions": [{"type": "emoji", "emoji": "🔥", "total_count": 3}],
-            },
-        }
+        # Create proper Update object with message_reaction_count
+        chat = Chat(id=-100123456, type="channel")
+        reactions = [ReactionCount(type=ReactionTypeEmoji(emoji="🔥"), total_count=3)]
 
-        response = client.post("/webhook", json=reaction_data)
+        message_reaction_count = MessageReactionCountUpdated(
+            chat=chat,
+            message_id=43,
+            date=datetime(2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc),
+            reactions=reactions,
+        )
 
-        assert response.status_code == 200
-        mock_handler.assert_called_once()
+        # Convert to dict for JSON payload
+        from telegram import Update
+        update = Update(update_id=12346, message_reaction_count=message_reaction_count)
+        reaction_data = update.to_dict()
+
+        # Use context manager to properly scope the mock
+        with patch("memebot.reactions.get_reaction_logger") as mock_get_logger:
+            mock_logger = mock_get_logger.return_value
+
+            response = client.post("/webhook", json=reaction_data)
+
+            assert response.status_code == 200
+            # Verify ReactionLogger.log_reaction_count was called
+            mock_logger.log_reaction_count.assert_called_once()
 
 
 @pytest.mark.asyncio

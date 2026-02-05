@@ -74,10 +74,10 @@ async def test_handle_reaction_count_update(mock_firestore):
         reactions=reactions,
     )
 
-    with patch("memebot.reactions.ReactionLogger") as MockLogger:
-        mock_instance = MockLogger.return_value
+    with patch("memebot.reactions.get_reaction_logger") as mock_get_logger:
+        mock_logger = mock_get_logger.return_value
         await handle_reaction_count_update(update)
 
-        mock_instance.log_reaction_count.assert_called_once()
-        call_kwargs = mock_instance.log_reaction_count.call_args[1]
+        mock_logger.log_reaction_count.assert_called_once()
+        call_kwargs = mock_logger.log_reaction_count.call_args[1]
         assert call_kwargs["message_id"] == 124
