@@ -120,3 +120,20 @@ async def test_emoji_endpoint_empty_stats():
         data = response.json()
 
         assert data == []
+
+
+@pytest.mark.asyncio
+async def test_emoji_endpoint_handles_errors():
+    """Test that /emoji endpoint handles errors gracefully."""
+    from unittest.mock import patch
+    from httpx import AsyncClient, ASGITransport
+    from main import app
+
+    with patch("main.get_emoji_stats_aggregator") as mock_get_aggregator:
+        mock_get_aggregator.side_effect = Exception("Database connection failed")
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get("/emoji")
+
+        assert response.status_code == 503
+        assert response.text == "Service temporarily unavailable"

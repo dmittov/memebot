@@ -86,15 +86,23 @@ async def index() -> Response:
     return Response(content="OK", status_code=HTTPStatus.OK)
 
 
-@app.get("/emoji")
-async def emoji_stats() -> list[dict]:
+@app.get("/emoji", response_model=None)
+async def emoji_stats() -> list[dict] | Response:
     """Get top 10 users by emoji count received on their posts.
 
     Returns:
         List of user statistics with username, total_count, and emojis breakdown
+        Or Response with 503 status if service unavailable
     """
-    aggregator = get_emoji_stats_aggregator()
-    return aggregator.get_top_users(limit=10)
+    try:
+        aggregator = get_emoji_stats_aggregator()
+        return aggregator.get_top_users(limit=10)
+    except Exception as exc:
+        logger.error("Failed to get emoji statistics: %s", str(exc))
+        return Response(
+            content="Service temporarily unavailable",
+            status_code=HTTPStatus.SERVICE_UNAVAILABLE,
+        )
 
 
 @app.post("/webhook")
