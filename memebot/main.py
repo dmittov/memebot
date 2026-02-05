@@ -10,6 +10,8 @@ from http import HTTPStatus
 from logging import getLogger
 
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from telegram import Bot, Update
 
 from memebot.censor import get_censor
@@ -80,6 +82,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
 app = FastAPI(lifespan=lifespan)
 
+# Setup Jinja2 templates
+templates = Jinja2Templates(directory="templates")
+
 
 @app.get("/")
 async def index() -> Response:
@@ -87,16 +92,30 @@ async def index() -> Response:
 
 
 @app.get("/emoji", response_model=None)
-async def emoji_stats() -> list[dict] | Response:
+async def emoji_stats(request: Request, format: str = "html") -> HTMLResponse | list[dict] | Response:
     """Get top 10 users by emoji count received on their posts.
 
+    Args:
+        format: Response format - 'html' (default) or 'json'
+
     Returns:
-        List of user statistics with username, total_count, and emojis breakdown
+        HTML page with terminal-styled statistics (default)
+        Or JSON list of user statistics if format=json
         Or Response with 503 status if service unavailable
     """
     try:
         aggregator = get_emoji_stats_aggregator()
-        return aggregator.get_top_users(limit=10)
+        data = aggregator.get_top_users(limit=10)
+
+        # Return JSON if requested
+        if format == "json":
+            return data
+
+        # Return HTML by default
+        return templates.TemplateResponse(
+            "emoji_stats.html",
+            {"request": request, "stats": data}
+        )
     except Exception as exc:
         logger.error("Failed to get emoji statistics: %s", str(exc))
         return Response(

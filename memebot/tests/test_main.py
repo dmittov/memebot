@@ -104,7 +104,7 @@ async def test_emoji_endpoint_returns_top_users():
         mock_aggregator.get_top_users.return_value = mock_stats
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            response = await client.get("/emoji")
+            response = await client.get("/emoji?format=json")
 
         assert response.status_code == 200
         data = response.json()
@@ -127,7 +127,7 @@ async def test_emoji_endpoint_empty_stats():
         mock_aggregator.get_top_users.return_value = []
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            response = await client.get("/emoji")
+            response = await client.get("/emoji?format=json")
 
         assert response.status_code == 200
         data = response.json()
