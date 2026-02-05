@@ -38,16 +38,62 @@ class TestMessageAuthorLogger:
         assert data["timestamp"] == datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
         assert "expiresAt" in data
 
+    def test_log_message_author_validation(self, author_logger):
+        """Test input validation in log_message_author."""
+        timestamp = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+
+        # Test invalid channel_message_id
+        with pytest.raises(AssertionError, match="channel_message_id must be positive"):
+            author_logger.log_message_author(
+                channel_message_id=0,
+                username="testuser",
+                timestamp=timestamp,
+            )
+
+        with pytest.raises(AssertionError, match="channel_message_id must be positive"):
+            author_logger.log_message_author(
+                channel_message_id=-1,
+                username="testuser",
+                timestamp=timestamp,
+            )
+
+        # Test empty username
+        with pytest.raises(AssertionError, match="username must not be empty"):
+            author_logger.log_message_author(
+                channel_message_id=12345,
+                username="",
+                timestamp=timestamp,
+            )
+
+        # Test whitespace-only username
+        with pytest.raises(AssertionError, match="username must not be empty"):
+            author_logger.log_message_author(
+                channel_message_id=12345,
+                username="   ",
+                timestamp=timestamp,
+            )
+
 
     def test_get_message_author(self, author_logger, mock_firestore):
         """Test retrieving message author from Firestore."""
         # Mock Firestore query response
-        mock_doc = mock_firestore.collection().where().limit().stream.return_value
+        mock_collection = mock_firestore.collection.return_value
+        mock_where = mock_collection.where.return_value
+        mock_limit = mock_where.limit.return_value
+        mock_doc = mock_limit.stream.return_value
         mock_doc.__iter__ = lambda self: iter([])
 
         result = author_logger.get_message_author(channel_message_id=12345)
 
         assert result is None
+
+        # Verify query parameters
+        mock_collection.where.assert_called_once()
+        call_args = mock_collection.where.call_args
+        field_filter = call_args[1]["filter"]
+        assert field_filter.field_path == "channel_message_id"
+        assert field_filter.op_string == "=="
+        assert field_filter.value == 12345
 
         # Test with data
         class MockDoc:
@@ -58,3 +104,15 @@ class TestMessageAuthorLogger:
 
         result = author_logger.get_message_author(channel_message_id=12345)
         assert result == "testuser"
+
+    def test_get_message_author_missing_username_field(self, author_logger, mock_firestore):
+        """Test retrieving message author when username field is missing."""
+        # Test with data but missing username field
+        class MockDocMissingUsername:
+            def to_dict(self):
+                return {"channel_message_id": 12345}
+
+        mock_firestore.collection().where().limit().stream.return_value.__iter__ = lambda self: iter([MockDocMissingUsername()])
+
+        result = author_logger.get_message_author(channel_message_id=12345)
+        assert result is None

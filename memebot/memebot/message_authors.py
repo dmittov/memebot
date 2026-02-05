@@ -33,6 +33,10 @@ class MessageAuthorLogger:
             username: Username of the message author
             timestamp: When the message was posted
         """
+        # Validate inputs
+        assert channel_message_id > 0, "channel_message_id must be positive"
+        assert username and username.strip(), "username must not be empty"
+
         logger.info(
             "Logging message author: message_id=%s username=%s",
             channel_message_id,
@@ -50,6 +54,8 @@ class MessageAuthorLogger:
     def get_message_author(self, channel_message_id: int) -> str | None:
         """Get username of message author by channel message ID.
 
+        Note: Requires a Firestore index on the 'channel_message_id' field.
+
         Args:
             channel_message_id: Message ID in the channel
 
@@ -64,7 +70,7 @@ class MessageAuthorLogger:
         )
 
         for doc in docs:
-            return doc.to_dict()["username"]
+            return doc.to_dict().get("username")
 
         return None
 
