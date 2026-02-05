@@ -31,39 +31,93 @@ class EmojiStatsAggregator:
             Sorted by total_count descending
         """
         # Get all reactions
-        reactions = self.db.collection(self.reactions_collection).stream()
+        # Note: stream() loads all reactions into memory, but this is acceptable
+        # since reactions have a 30-day TTL, limiting the data volume.
+        reactions = list(self.db.collection(self.reactions_collection).stream())
+
+        # First pass: collect all message_ids to batch-load authors
+        message_ids = set()
+        for reaction_doc in reactions:
+            try:
+                reaction_data = reaction_doc.to_dict()
+                message_id = reaction_data.get("message_id")
+                if message_id:
+                    message_ids.add(message_id)
+            except Exception as e:
+                logger.warning("Failed to parse reaction doc %s: %s", reaction_doc.id, e)
+                continue
+
+        # Batch-load all authors to avoid N+1 query problem
+        # Build a message_id -> username lookup dict
+        message_to_username = {}
+        if message_ids:
+            try:
+                # Note: Firestore 'in' queries are limited to 30 items, so we batch them
+                message_id_list = list(message_ids)
+                for i in range(0, len(message_id_list), 30):
+                    batch = message_id_list[i:i + 30]
+                    author_docs = (
+                        self.db.collection(self.authors_collection)
+                        .where(filter=FieldFilter("channel_message_id", "in", batch))
+                        .stream()
+                    )
+                    for author_doc in author_docs:
+                        author_data = author_doc.to_dict()
+                        msg_id = author_data.get("channel_message_id")
+                        username = author_data.get("username")
+                        if msg_id and username:
+                            message_to_username[msg_id] = username
+            except Exception as e:
+                logger.error("Failed to batch-load authors: %s", e)
 
         # Aggregate by username
         user_stats = defaultdict(lambda: {"total_count": 0, "emojis": defaultdict(int)})
 
         for reaction_doc in reactions:
-            reaction_data = reaction_doc.to_dict()
-            message_id = reaction_data["message_id"]
-            counts = reaction_data["counts"]
+            try:
+                reaction_data = reaction_doc.to_dict()
+                message_id = reaction_data.get("message_id")
+                counts = reaction_data.get("counts")
 
-            # Look up author
-            author_docs = (
-                self.db.collection(self.authors_collection)
-                .where(filter=FieldFilter("channel_message_id", "==", message_id))
-                .limit(1)
-                .stream()
-            )
+                if not message_id:
+                    logger.warning("Reaction doc %s missing message_id", reaction_doc.id)
+                    continue
 
-            username = None
-            for author_doc in author_docs:
-                username = author_doc.to_dict().get("username")
-                break
+                if not counts:
+                    logger.warning("Reaction doc %s missing counts", reaction_doc.id)
+                    continue
 
-            if username is None:
-                logger.warning("No author found for message_id=%s", message_id)
+                # Look up author from batch-loaded dict
+                username = message_to_username.get(message_id)
+
+                if username is None:
+                    logger.warning("No author found for message_id=%s", message_id)
+                    continue
+
+                # Aggregate counts
+                for count_item in counts:
+                    try:
+                        emoji = count_item.get("reaction")
+                        count = count_item.get("count")
+
+                        if not emoji:
+                            logger.warning("Count item missing reaction emoji in message_id=%s", message_id)
+                            continue
+
+                        # Validate count is an integer
+                        if not isinstance(count, int):
+                            logger.warning("Invalid count type for emoji %s in message_id=%s: %s", emoji, message_id, type(count))
+                            continue
+
+                        user_stats[username]["emojis"][emoji] += count
+                        user_stats[username]["total_count"] += count
+                    except Exception as e:
+                        logger.warning("Failed to process count item in message_id=%s: %s", message_id, e)
+                        continue
+
+            except Exception as e:
+                logger.warning("Failed to process reaction doc %s: %s", reaction_doc.id, e)
                 continue
-
-            # Aggregate counts
-            for count_item in counts:
-                emoji = count_item["reaction"]
-                count = count_item["count"]
-                user_stats[username]["emojis"][emoji] += count
-                user_stats[username]["total_count"] += count
 
         # Convert to list and sort
         result = []
