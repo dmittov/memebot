@@ -21,6 +21,7 @@ from telegram.error import Forbidden
 
 from memebot.config import get_channel_id, get_messenger_config, get_token
 from memebot.explainer import Explainer
+from memebot.message_authors import get_message_author_logger
 
 logger = getLogger(__name__)
 
@@ -295,11 +296,14 @@ class CensorSubscriber:
                 text=result.reason,
             )
         if result.is_allowed:
+            # Determine the author username
+            assert message.from_user is not None
+            author_username = message.from_user.username or message.from_user.first_name
+
             # Check if this is a forwarded message (has forward_origin)
             if message.forward_origin is not None:
                 # For forwarded messages, use copy_message with attribution
                 # to show who sent it to the bot instead of the original channel
-                assert message.from_user is not None
                 caption = build_caption_with_attribution(
                     message.caption, message.from_user
                 )
@@ -316,7 +320,16 @@ class CensorSubscriber:
                     from_chat_id=message.chat.id,
                     message_id=message.message_id,
                 )
+
             logger.info(response)
+
+            # Log the message author for emoji statistics
+            author_logger = get_message_author_logger()
+            author_logger.log_message_author(
+                channel_message_id=response.message_id,
+                username=author_username,
+                timestamp=response.date,
+            )
 
 
 def get_censor(loop: asyncio.AbstractEventLoop) -> CensorSubscriber:

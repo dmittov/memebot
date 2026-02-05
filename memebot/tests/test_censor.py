@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -94,10 +95,14 @@ async def test_censor_subscriber_forwards_with_attribution():
     }
     message._freeze()
 
-    with patch("memebot.censor.Bot") as MockBot:
+    with patch("memebot.censor.Bot") as MockBot, \
+         patch("memebot.censor.get_message_author_logger") as mock_get_logger:
         mock_bot = MockBot.return_value
-        mock_bot.copy_message = AsyncMock(return_value=MagicMock(message_id=999))
-        mock_bot.forward_message = AsyncMock(return_value=MagicMock(message_id=999))
+        mock_bot.copy_message = AsyncMock(return_value=MagicMock(message_id=999, date=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)))
+        mock_bot.forward_message = AsyncMock(return_value=MagicMock(message_id=999, date=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)))
+
+        mock_author_logger = MagicMock()
+        mock_get_logger.return_value = mock_author_logger
 
         await subscriber.check(message)
 
@@ -133,9 +138,13 @@ async def test_censor_subscriber_regular_forward_without_attribution():
         from_user=user,
     )
 
-    with patch("memebot.censor.Bot") as MockBot:
+    with patch("memebot.censor.Bot") as MockBot, \
+         patch("memebot.censor.get_message_author_logger") as mock_get_logger:
         mock_bot = MockBot.return_value
-        mock_bot.forward_message = AsyncMock(return_value=MagicMock(message_id=999))
+        mock_bot.forward_message = AsyncMock(return_value=MagicMock(message_id=999, date=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)))
+
+        mock_author_logger = MagicMock()
+        mock_get_logger.return_value = mock_author_logger
 
         await subscriber.check(message)
 
@@ -171,9 +180,13 @@ async def test_censor_subscriber_forwarded_message_with_existing_caption():
     message.forward_origin = {"type": "channel"}
     message._freeze()
 
-    with patch("memebot.censor.Bot") as MockBot:
+    with patch("memebot.censor.Bot") as MockBot, \
+         patch("memebot.censor.get_message_author_logger") as mock_get_logger:
         mock_bot = MockBot.return_value
-        mock_bot.copy_message = AsyncMock(return_value=MagicMock(message_id=999))
+        mock_bot.copy_message = AsyncMock(return_value=MagicMock(message_id=999, date=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)))
+
+        mock_author_logger = MagicMock()
+        mock_get_logger.return_value = mock_author_logger
 
         await subscriber.check(message)
 
@@ -185,3 +198,119 @@ def test_build_sender_attribution_none_user():
     """Test that None user raises attribution error."""
     with pytest.raises(AttributeError):
         build_sender_attribution(None)
+
+
+@pytest.mark.asyncio
+async def test_censor_logs_author_for_forwarded_message():
+    """Test that CensorSubscriber logs message author when posting forwarded message."""
+    with patch("memebot.censor.get_message_author_logger") as mock_get_logger, \
+         patch("memebot.censor.Bot") as mock_bot_class, \
+         patch("memebot.censor.DefaultCensor") as mock_censor_class:
+
+        # Setup mocks
+        mock_author_logger = MagicMock()
+        mock_get_logger.return_value = mock_author_logger
+
+        mock_bot = AsyncMock()
+        mock_bot_class.return_value = mock_bot
+
+        mock_censor = AsyncMock()
+        mock_censor.check.return_value = MagicMock(is_allowed=True, reason="")
+        mock_censor_class.return_value = mock_censor
+
+        # Mock response from copy_message (channel post)
+        channel_message = Message(
+            message_id=99999,
+            date=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            chat=Chat(id=-1001234567, type="channel"),
+        )
+        mock_bot.copy_message.return_value = channel_message
+
+        # Create test message with forward_origin
+        user = User(id=12345, first_name="Test", username="testuser", is_bot=False)
+        chat = Chat(id=12345, type="private")
+
+        message = Message(
+            message_id=1,
+            date=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            chat=chat,
+            from_user=user,
+        )
+        message._unfreeze()
+        message.forward_origin = {
+            "type": "channel",
+            "chat": {
+                "id": -1009999,
+                "type": "channel",
+            },
+            "message_id": 888,
+            "date": 1704110400,
+        }
+        message._freeze()
+
+        # Run check
+        from memebot.censor import CensorSubscriber
+        import asyncio
+
+        subscriber = CensorSubscriber(loop=asyncio.get_event_loop())
+        await subscriber.check(message)
+
+        # Verify author was logged
+        mock_author_logger.log_message_author.assert_called_once_with(
+            channel_message_id=99999,
+            username="testuser",
+            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+        )
+
+
+@pytest.mark.asyncio
+async def test_censor_logs_author_for_regular_message():
+    """Test that CensorSubscriber logs message author when posting regular message."""
+    with patch("memebot.censor.get_message_author_logger") as mock_get_logger, \
+         patch("memebot.censor.Bot") as mock_bot_class, \
+         patch("memebot.censor.DefaultCensor") as mock_censor_class:
+
+        # Setup mocks
+        mock_author_logger = MagicMock()
+        mock_get_logger.return_value = mock_author_logger
+
+        mock_bot = AsyncMock()
+        mock_bot_class.return_value = mock_bot
+
+        mock_censor = AsyncMock()
+        mock_censor.check.return_value = MagicMock(is_allowed=True, reason="")
+        mock_censor_class.return_value = mock_censor
+
+        # Mock response from forward_message (channel post)
+        channel_message = Message(
+            message_id=88888,
+            date=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            chat=Chat(id=-1001234567, type="channel"),
+        )
+        mock_bot.forward_message.return_value = channel_message
+
+        # Create test message without forward_origin
+        user = User(id=54321, first_name="Test", username="regularuser", is_bot=False)
+        chat = Chat(id=54321, type="private")
+
+        message = Message(
+            message_id=2,
+            date=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            chat=chat,
+            from_user=user,
+            forward_origin=None,
+        )
+
+        # Run check
+        from memebot.censor import CensorSubscriber
+        import asyncio
+
+        subscriber = CensorSubscriber(loop=asyncio.get_event_loop())
+        await subscriber.check(message)
+
+        # Verify author was logged
+        mock_author_logger.log_message_author.assert_called_once_with(
+            channel_message_id=88888,
+            username="regularuser",
+            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+        )
