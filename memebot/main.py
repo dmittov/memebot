@@ -15,6 +15,7 @@ from telegram import Bot, Update
 from memebot.censor import get_censor
 from memebot.commands import CommandInterface, build_command
 from memebot.config import get_token
+from memebot.emoji_stats import get_emoji_stats_aggregator
 from memebot.explainer import get_explainer
 from memebot.logging_setup import setup_logging
 from memebot.reactions import handle_reaction_count_update
@@ -83,6 +84,17 @@ app = FastAPI(lifespan=lifespan)
 @app.get("/")
 async def index() -> Response:
     return Response(content="OK", status_code=HTTPStatus.OK)
+
+
+@app.get("/emoji")
+async def emoji_stats() -> list[dict]:
+    """Get top 10 users by emoji count received on their posts.
+
+    Returns:
+        List of user statistics with username, total_count, and emojis breakdown
+    """
+    aggregator = get_emoji_stats_aggregator()
+    return aggregator.get_top_users(limit=10)
 
 
 @app.post("/webhook")

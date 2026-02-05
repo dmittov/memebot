@@ -64,3 +64,59 @@ class TestWebhook:
 
         assert response.status_code == 200
         mock_handler.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_emoji_endpoint_returns_top_users():
+    """Test that /emoji endpoint returns top users statistics."""
+    from unittest.mock import patch
+    from httpx import AsyncClient, ASGITransport
+    from main import app
+
+    mock_stats = [
+        {
+            "username": "user1",
+            "total_count": 25,
+            "emojis": {"🔥": 15, "👍": 10},
+        },
+        {
+            "username": "user2",
+            "total_count": 18,
+            "emojis": {"❤️": 18},
+        },
+    ]
+
+    with patch("main.get_emoji_stats_aggregator") as mock_get_aggregator:
+        mock_aggregator = mock_get_aggregator.return_value
+        mock_aggregator.get_top_users.return_value = mock_stats
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get("/emoji")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert len(data) == 2
+        assert data[0]["username"] == "user1"
+        assert data[0]["total_count"] == 25
+        assert data[0]["emojis"]["🔥"] == 15
+
+
+@pytest.mark.asyncio
+async def test_emoji_endpoint_empty_stats():
+    """Test that /emoji endpoint handles empty statistics."""
+    from unittest.mock import patch
+    from httpx import AsyncClient, ASGITransport
+    from main import app
+
+    with patch("main.get_emoji_stats_aggregator") as mock_get_aggregator:
+        mock_aggregator = mock_get_aggregator.return_value
+        mock_aggregator.get_top_users.return_value = []
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get("/emoji")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data == []
