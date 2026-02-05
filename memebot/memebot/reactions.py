@@ -75,7 +75,8 @@ class ReactionLogger:
             "expiresAt": date + self.firestore_ttl,
             "event_type": "count",
         }
-        self.db.collection(self.collection_name).document().set(data)
+        # Use message_id as document ID to prevent duplicates
+        self.db.collection(self.collection_name).document(str(message_id)).set(data)
 
 
 # Module-level singleton

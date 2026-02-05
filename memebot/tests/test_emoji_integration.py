@@ -89,21 +89,34 @@ async def test_full_emoji_stats_workflow():
             }),
         ]
 
-        # Mock author documents
-        authors = [
-            MockDoc({"channel_message_id": 1001, "username": "alice"}),
-            MockDoc({"channel_message_id": 1002, "username": "bob"}),
-        ]
+        # Mock author documents - keyed by message_id
+        author_map = {
+            "1001": {"channel_message_id": 1001, "username": "alice"},
+            "1002": {"channel_message_id": 1002, "username": "bob"},
+        }
 
         def collection_side_effect(name):
             mock_coll = MagicMock()
             if name == "reactions":
                 mock_coll.stream.return_value = iter(reactions)
             elif name == "message_authors":
-                # Mock the .where(filter=...) query for batch-loading authors
-                mock_where = MagicMock()
-                mock_where.stream.return_value = iter(authors)
-                mock_coll.where.return_value = mock_where
+                # Mock direct document access by ID
+                def document_side_effect(doc_id):
+                    mock_doc_ref = MagicMock()
+
+                    def get_side_effect():
+                        mock_doc = MagicMock()
+                        if doc_id in author_map:
+                            mock_doc.exists = True
+                            mock_doc.to_dict.return_value = author_map[doc_id]
+                        else:
+                            mock_doc.exists = False
+                        return mock_doc
+
+                    mock_doc_ref.get = get_side_effect
+                    return mock_doc_ref
+
+                mock_coll.document.side_effect = document_side_effect
 
             return mock_coll
 

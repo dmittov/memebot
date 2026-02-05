@@ -5,7 +5,6 @@ from functools import cached_property
 from logging import getLogger
 
 from google.cloud import firestore
-from google.cloud.firestore import FieldFilter
 
 logger = getLogger(__name__)
 
@@ -47,28 +46,22 @@ class EmojiStatsAggregator:
                 logger.warning("Failed to parse reaction doc %s: %s", reaction_doc.id, e)
                 continue
 
-        # Batch-load all authors to avoid N+1 query problem
+        # Load all authors by document ID (direct access, no query needed)
         # Build a message_id -> username lookup dict
         message_to_username = {}
         if message_ids:
             try:
-                # Note: Firestore 'in' queries are limited to 30 items, so we batch them
-                message_id_list = list(message_ids)
-                for i in range(0, len(message_id_list), 30):
-                    batch = message_id_list[i:i + 30]
-                    author_docs = (
-                        self.db.collection(self.authors_collection)
-                        .where(filter=FieldFilter("channel_message_id", "in", batch))
-                        .stream()
-                    )
-                    for author_doc in author_docs:
+                # Since we use message_id as document ID, we can get documents directly
+                # This is faster than queries and has no batch size limits
+                for message_id in message_ids:
+                    author_doc = self.db.collection(self.authors_collection).document(str(message_id)).get()
+                    if author_doc.exists:
                         author_data = author_doc.to_dict()
-                        msg_id = author_data.get("channel_message_id")
                         username = author_data.get("username")
-                        if msg_id and username:
-                            message_to_username[msg_id] = username
+                        if username:
+                            message_to_username[message_id] = username
             except Exception as e:
-                logger.error("Failed to batch-load authors: %s", e)
+                logger.error("Failed to load authors: %s", e)
 
         # Aggregate by username
         user_stats = defaultdict(lambda: {"total_count": 0, "emojis": defaultdict(int)})

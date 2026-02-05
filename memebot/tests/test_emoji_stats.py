@@ -72,18 +72,25 @@ def test_get_top_users_aggregates_by_username(aggregator, mock_firestore):
             mock_coll.stream.return_value = reactions
             return mock_coll
         elif name == "message_authors":
-            # Handle batch queries with 'in' operator
-            def where_side_effect(filter):
-                mock_query = MagicMock()
-                # For batch queries with 'in' operator
-                if hasattr(filter, 'value') and isinstance(filter.value, list):
-                    message_ids = filter.value
-                    matching_authors = [a for a in authors if a.message_id in message_ids]
-                    mock_query.stream.return_value = matching_authors
-                    return mock_query
-                return mock_query
+            # Handle direct document access by ID
+            author_map = {a.message_id: a for a in authors}
 
-            mock_coll.where.side_effect = where_side_effect
+            def document_side_effect(doc_id):
+                mock_doc_ref = MagicMock()
+
+                def get_side_effect():
+                    mock_doc = MagicMock()
+                    if doc_id in author_map:
+                        mock_doc.exists = True
+                        mock_doc.to_dict.return_value = author_map[doc_id].to_dict()
+                    else:
+                        mock_doc.exists = False
+                    return mock_doc
+
+                mock_doc_ref.get = get_side_effect
+                return mock_doc_ref
+
+            mock_coll.document.side_effect = document_side_effect
             return mock_coll
 
         return MagicMock()
@@ -145,17 +152,25 @@ def test_get_top_users_respects_limit(aggregator, mock_firestore):
             mock_coll.stream.return_value = reactions
             return mock_coll
         elif name == "message_authors":
-            def where_side_effect(filter):
-                mock_query = MagicMock()
-                # For batch queries with 'in' operator
-                if hasattr(filter, 'value') and isinstance(filter.value, list):
-                    message_ids = filter.value
-                    matching_authors = [a for a in authors if a.message_id in message_ids]
-                    mock_query.stream.return_value = matching_authors
-                    return mock_query
-                return mock_query
+            # Handle direct document access by ID
+            author_map = {a.message_id: a for a in authors}
 
-            mock_coll.where.side_effect = where_side_effect
+            def document_side_effect(doc_id):
+                mock_doc_ref = MagicMock()
+
+                def get_side_effect():
+                    mock_doc = MagicMock()
+                    if doc_id in author_map:
+                        mock_doc.exists = True
+                        mock_doc.to_dict.return_value = author_map[doc_id].to_dict()
+                    else:
+                        mock_doc.exists = False
+                    return mock_doc
+
+                mock_doc_ref.get = get_side_effect
+                return mock_doc_ref
+
+            mock_coll.document.side_effect = document_side_effect
             return mock_coll
 
         return MagicMock()
@@ -220,17 +235,25 @@ def test_get_top_users_handles_malformed_reaction_data(aggregator, mock_firestor
             mock_coll.stream.return_value = reactions
             return mock_coll
         elif name == "message_authors":
-            def where_side_effect(filter):
-                mock_query = MagicMock()
-                # For batch queries with 'in' operator
-                if hasattr(filter, 'value') and isinstance(filter.value, list):
-                    message_ids = filter.value
-                    matching_authors = [a for a in authors if a.message_id in message_ids]
-                    mock_query.stream.return_value = matching_authors
-                    return mock_query
-                return mock_query
+            # Handle direct document access by ID
+            author_map = {a.message_id: a for a in authors}
 
-            mock_coll.where.side_effect = where_side_effect
+            def document_side_effect(doc_id):
+                mock_doc_ref = MagicMock()
+
+                def get_side_effect():
+                    mock_doc = MagicMock()
+                    if doc_id in author_map:
+                        mock_doc.exists = True
+                        mock_doc.to_dict.return_value = author_map[doc_id].to_dict()
+                    else:
+                        mock_doc.exists = False
+                    return mock_doc
+
+                mock_doc_ref.get = get_side_effect
+                return mock_doc_ref
+
+            mock_coll.document.side_effect = document_side_effect
             return mock_coll
 
         return MagicMock()
@@ -287,16 +310,25 @@ def test_get_top_users_handles_invalid_count_types(aggregator, mock_firestore):
             mock_coll.stream.return_value = reactions
             return mock_coll
         elif name == "message_authors":
-            def where_side_effect(filter):
-                mock_query = MagicMock()
-                if hasattr(filter, 'value') and isinstance(filter.value, list):
-                    message_ids = filter.value
-                    matching_authors = [a for a in authors if a.message_id in message_ids]
-                    mock_query.stream.return_value = matching_authors
-                    return mock_query
-                return mock_query
+            # Handle direct document access by ID
+            author_map = {a.message_id: a for a in authors}
 
-            mock_coll.where.side_effect = where_side_effect
+            def document_side_effect(doc_id):
+                mock_doc_ref = MagicMock()
+
+                def get_side_effect():
+                    mock_doc = MagicMock()
+                    if doc_id in author_map:
+                        mock_doc.exists = True
+                        mock_doc.to_dict.return_value = author_map[doc_id].to_dict()
+                    else:
+                        mock_doc.exists = False
+                    return mock_doc
+
+                mock_doc_ref.get = get_side_effect
+                return mock_doc_ref
+
+            mock_coll.document.side_effect = document_side_effect
             return mock_coll
 
         return MagicMock()

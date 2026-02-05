@@ -76,43 +76,35 @@ class TestMessageAuthorLogger:
 
     def test_get_message_author(self, author_logger, mock_firestore):
         """Test retrieving message author from Firestore."""
-        # Mock Firestore query response
-        mock_collection = mock_firestore.collection.return_value
-        mock_where = mock_collection.where.return_value
-        mock_limit = mock_where.limit.return_value
-        mock_doc = mock_limit.stream.return_value
-        mock_doc.__iter__ = lambda self: iter([])
+        from unittest.mock import MagicMock
+
+        # Mock document that doesn't exist
+        mock_doc = MagicMock()
+        mock_doc.exists = False
+        mock_firestore.collection().document().get.return_value = mock_doc
 
         result = author_logger.get_message_author(channel_message_id=12345)
 
         assert result is None
 
-        # Verify query parameters
-        mock_collection.where.assert_called_once()
-        call_args = mock_collection.where.call_args
-        field_filter = call_args[1]["filter"]
-        assert field_filter.field_path == "channel_message_id"
-        assert field_filter.op_string == "=="
-        assert field_filter.value == 12345
-
-        # Test with data
-        class MockDoc:
-            def to_dict(self):
-                return {"username": "testuser", "channel_message_id": 12345}
-
-        mock_firestore.collection().where().limit().stream.return_value.__iter__ = lambda self: iter([MockDoc()])
+        # Test with existing document
+        mock_doc_exists = MagicMock()
+        mock_doc_exists.exists = True
+        mock_doc_exists.to_dict.return_value = {"username": "testuser", "channel_message_id": 12345}
+        mock_firestore.collection().document().get.return_value = mock_doc_exists
 
         result = author_logger.get_message_author(channel_message_id=12345)
         assert result == "testuser"
 
     def test_get_message_author_missing_username_field(self, author_logger, mock_firestore):
         """Test retrieving message author when username field is missing."""
-        # Test with data but missing username field
-        class MockDocMissingUsername:
-            def to_dict(self):
-                return {"channel_message_id": 12345}
+        from unittest.mock import MagicMock
 
-        mock_firestore.collection().where().limit().stream.return_value.__iter__ = lambda self: iter([MockDocMissingUsername()])
+        # Test with existing document but missing username field
+        mock_doc = MagicMock()
+        mock_doc.exists = True
+        mock_doc.to_dict.return_value = {"channel_message_id": 12345}
+        mock_firestore.collection().document().get.return_value = mock_doc
 
         result = author_logger.get_message_author(channel_message_id=12345)
         assert result is None

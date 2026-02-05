@@ -5,7 +5,6 @@ from functools import cached_property
 from logging import getLogger
 
 from google.cloud import firestore
-from google.cloud.firestore import FieldFilter
 
 logger = getLogger(__name__)
 
@@ -49,12 +48,11 @@ class MessageAuthorLogger:
             "timestamp": timestamp,
             "expiresAt": timestamp + self.firestore_ttl,
         }
-        self.db.collection(self.collection_name).document().set(data)
+        # Use channel_message_id as document ID to prevent duplicates
+        self.db.collection(self.collection_name).document(str(channel_message_id)).set(data)
 
     def get_message_author(self, channel_message_id: int) -> str | None:
         """Get username of message author by channel message ID.
-
-        Note: Requires a Firestore index on the 'channel_message_id' field.
 
         Args:
             channel_message_id: Message ID in the channel
@@ -62,14 +60,10 @@ class MessageAuthorLogger:
         Returns:
             Username of the author, or None if not found
         """
-        docs = (
-            self.db.collection(self.collection_name)
-            .where(filter=FieldFilter("channel_message_id", "==", channel_message_id))
-            .limit(1)
-            .stream()
-        )
+        # Use direct document access by ID (no index required)
+        doc = self.db.collection(self.collection_name).document(str(channel_message_id)).get()
 
-        for doc in docs:
+        if doc.exists:
             return doc.to_dict().get("username")
 
         return None
