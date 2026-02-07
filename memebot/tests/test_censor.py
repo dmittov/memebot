@@ -3,7 +3,8 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from telegram import User, Chat, Message
+from telegram import MessageOriginUser, PhotoSize, User, Chat, Message
+from telegram.constants import ChatType, MessageOriginType
 
 from memebot.censor import (
     build_sender_attribution,
@@ -53,6 +54,64 @@ def test_build_caption_with_attribution_empty_caption():
     user = User(id=123, first_name="John", is_bot=False, username="johndoe")
     result = build_caption_with_attribution("", user)
     assert result == "sent by @johndoe"
+
+@pytest.mark.asyncio
+async def test_censor_forward_author_logger():
+    """Tests that the author is logged also for forwarded messages"""
+    authors_name = "johnDoe"
+    message = Message(
+        api_kwargs={
+            "forward_date": 1770403441, 
+            "forward_from": {
+                "id": 908076338, 
+                "is_bot": False, 
+                "first_name": "Mycraft", 
+                "username": "hotel_berlin"
+            }
+        },
+        channel_chat_created=False,
+        chat=Chat(
+            first_name="John", 
+            id=7777,
+            last_name="Doe",
+            type=ChatType.PRIVATE,
+            username=authors_name,
+        ), 
+        date=datetime(2026, 2, 6, 22, 37, 22, tzinfo=timezone.utc),
+        delete_chat_photo=False,
+        forward_origin=MessageOriginUser(
+            date=datetime(2026, 2, 6, 18, 44, 1, tzinfo=timezone.utc), 
+            sender_user=User(first_name="Mycraft", id=908076338, is_bot=False, username="hotel_berlin"), 
+        ),
+        from_user=User(first_name="John", id=7777, is_bot=False, is_premium=True, language_code="en", last_name="Doe", username=authors_name),
+        group_chat_created=False,
+        message_id=2121,
+        photo=(
+            PhotoSize(file_id="AgACAgIAAxkBAAIISWmGbSLKYLktaqPzm8OXfF3AycxfAAI8Emsb160wSIBZucARQhv6AQADAgADcwADOAQ", file_size=1732, file_unique_id="AQADPBJrG9etMEh4", height=90, width=70),
+            PhotoSize(file_id="AgACAgIAAxkBAAIISWmGbSLKYLktaqPzm8OXfF3AycxfAAI8Emsb160wSIBZucARQhv6AQADAgADbQADOAQ", file_size=23217, file_unique_id="AQADPBJrG9etMEhy", height=320, width=248),
+            PhotoSize(file_id="AgACAgIAAxkBAAIISWmGbSLKYLktaqPzm8OXfF3AycxfAAI8Emsb160wSIBZucARQhv6AQADAgADeAADOAQ", file_size=89982, file_unique_id="AQADPBJrG9etMEh9", height=800, width=619),
+            PhotoSize(file_id="AgACAgIAAxkBAAIISWmGbSLKYLktaqPzm8OXfF3AycxfAAI8Emsb160wSIBZucARQhv6AQADAgADeQADOAQ", file_size=129871, file_unique_id="AQADPBJrG9etMEh-", height=1280, width=991)
+        ), 
+        supergroup_chat_created=False,
+    )
+    with patch("memebot.censor.Bot") as MockBot, \
+         patch("memebot.censor.get_message_author_logger") as mock_get_logger:
+        mock_bot = MockBot.return_value
+        mock_bot.copy_message = AsyncMock(
+            return_value=MagicMock(
+                message_id=999,
+                date=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+            )
+        )
+        mock_author_logger = MagicMock()
+        mock_get_logger.return_value = mock_author_logger
+
+        loop = asyncio.get_event_loop()
+        subscriber = CensorSubscriber(loop=loop)
+        subscriber.censor.check = AsyncMock(return_value=CensorResult(is_allowed=True))
+        await subscriber.check(message=message)
+
+        mock_author_logger.log_message_author.call_args[1]["username"] == authors_name
 
 
 @pytest.mark.asyncio
