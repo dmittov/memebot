@@ -26,5 +26,5 @@ jobs:
         run: mypy --install-types --non-interactive  --check .
         working-directory: memebot
       - name: Run tests
-        run: pytest -n auto -m "not pubsub" --dist loadgroup
+        run: pytest -n auto -m "not pubsub and not live" --dist loadgroup
         working-directory: memebot

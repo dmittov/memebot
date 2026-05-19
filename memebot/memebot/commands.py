@@ -96,11 +96,14 @@ class ExplainCommand(CommandInterface):
                 text=f"message.reply_to_message.sender_chat.id = {message.reply_to_message.sender_chat.id} instead of {get_channel_id()}",
             )
             return False
-        if message.reply_to_message.photo is None:
+        if (
+            not message.reply_to_message.photo
+            and message.reply_to_message.video is None
+        ):
             await Bot(token=get_token()).send_message(
                 chat_id=message.chat.id,
                 reply_to_message_id=message.id,
-                text="Can comment just photos for yet, no photo found.",
+                text="Can comment just photos and videos for yet, neither found.",
             )
             return False
         logger.info("Message is valid for explain")
