@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from logging import getLogger
-from typing import override
+from typing import cast, override
 from zoneinfo import ZoneInfo
 
 from dateutil.relativedelta import relativedelta
@@ -185,7 +185,10 @@ class NewUserCensor(AbstractCensor):
         assert message.from_user is not None
         uid = str(message.from_user.id)
         logger.info("NewUserCensor check for user [%s] ...", uid)
-        user = self.db.collection(self.collection).document(uid).get()
+        user = cast(
+            firestore.DocumentSnapshot,
+            self.db.collection(self.collection).document(uid).get(),
+        )
         if user.exists:
             logger.info("NewUserCensor check for user [%s] [passed]", uid)
             return CensorResult(is_allowed=True)

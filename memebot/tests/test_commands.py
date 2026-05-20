@@ -1,3 +1,4 @@
+import datetime
 import json
 from asyncio.subprocess import Process
 
@@ -6,10 +7,10 @@ from google.api_core.exceptions import DeadlineExceeded
 from google.cloud.pubsub_v1 import PublisherClient, SubscriberClient
 from google.cloud.pubsub_v1.futures import Future as PublisherFuture
 from pytest_mock import MockerFixture
-from telegram import Bot, Message
+from telegram import Bot, Chat, Message
 
 import memebot.commands as commands
-from memebot.config import get_explainer_config
+from memebot.config import get_channel_id, get_explainer_config
 from tests.helpers import clean_subscription
 
 
@@ -96,3 +97,66 @@ class TestExplainCommand:
         data = json.loads(pubsub_msg.data.decode("utf-8"))
         restored_message = Message.de_json(data=data, bot=None)
         assert restored_message.text == explain_message.text
+
+
+class TestExplainCommandValidate:
+
+    @pytest.mark.asyncio
+    async def test_validate_accepts_photo_reply(
+        self, mocker: MockerFixture, explain_message: Message
+    ) -> None:
+        """Regression: photo replies must still be accepted."""
+        bot_mock = mocker.MagicMock(spec=Bot)
+        bot_mock.send_message = mocker.AsyncMock()
+        mocker.patch("memebot.commands.Bot", return_value=bot_mock)
+        mocker.patch("memebot.commands.get_token", return_value="fake")
+
+        command = commands.ExplainCommand(explain_message)
+        result = await command.validate(explain_message)
+
+        assert result is True
+        bot_mock.send_message.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_validate_accepts_video_reply(
+        self, mocker: MockerFixture, video_explain_message: Message
+    ) -> None:
+        """New: video replies must be accepted."""
+        bot_mock = mocker.MagicMock(spec=Bot)
+        bot_mock.send_message = mocker.AsyncMock()
+        mocker.patch("memebot.commands.Bot", return_value=bot_mock)
+        mocker.patch("memebot.commands.get_token", return_value="fake")
+
+        command = commands.ExplainCommand(video_explain_message)
+        result = await command.validate(video_explain_message)
+
+        assert result is True
+        bot_mock.send_message.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_validate_rejects_text_only_reply(
+        self, mocker: MockerFixture, explain_message: Message
+    ) -> None:
+        """A reply with no photo and no video must be rejected."""
+        msg = Message.de_json(data=json.loads(explain_message.to_json()), bot=None)
+        msg._unfreeze()
+        msg.reply_to_message = Message(
+            message_id=99,
+            date=datetime.datetime.now(datetime.timezone.utc),
+            sender_chat=Chat(id=get_channel_id(), type="channel"),
+            chat=Chat(type="supergroup", id=get_channel_id()),
+        )
+        msg._freeze()
+
+        bot_mock = mocker.MagicMock(spec=Bot)
+        bot_mock.send_message = mocker.AsyncMock()
+        mocker.patch("memebot.commands.Bot", return_value=bot_mock)
+        mocker.patch("memebot.commands.get_token", return_value="fake")
+
+        command = commands.ExplainCommand(msg)
+        result = await command.validate(msg)
+
+        assert result is False
+        bot_mock.send_message.assert_called_once()
+        call_text = bot_mock.send_message.call_args.kwargs["text"]
+        assert "neither found" in call_text

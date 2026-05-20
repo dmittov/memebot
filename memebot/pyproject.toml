@@ -3,6 +3,7 @@ testpaths = ["tests"]
 pythonpath = "."
 markers = [
     "pubsub: tests that require pubsub emulator",
+    "live: hits real Vertex AI and runs ffmpeg; needs GCP ADC, skipped in CI",
 ]
 
 [tool.mypy]

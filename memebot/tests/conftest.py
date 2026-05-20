@@ -14,7 +14,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from google.cloud.pubsub_v1 import PublisherClient, SubscriberClient
 from pytest_mock import MockerFixture
-from telegram import Chat, Message, PhotoSize
+from telegram import Chat, Message, PhotoSize, Video
 
 from main import app
 from memebot.config import get_channel_id, get_explainer_config, get_messenger_config
@@ -67,6 +67,38 @@ def explain_message(message: Message) -> Message:
             )
         ],
         caption="Es ist Mittwoch, meine Kerle",
+    )
+    message._freeze()
+    return message
+
+
+@pytest.fixture
+def video_explain_message(message: Message) -> Message:
+    """Telegram /explain message replying to a channel video."""
+    message = Message.de_json(data=json.loads(message.to_json()), bot=None)
+    message._unfreeze()
+    message.text = "/explain"
+    message.chat = Chat(
+        type="supergroup",
+        id=get_channel_id(),
+    )
+    message.reply_to_message = Message(
+        message_id=3,
+        date=datetime.datetime.now(datetime.timezone.utc),
+        sender_chat=Chat(id=get_channel_id(), type="channel"),
+        chat=Chat(
+            type="supergroup",
+            id=get_channel_id(),
+        ),
+        video=Video(
+            file_id="BAADAgADfQADVideoFakeId",
+            file_unique_id="AQADVideoUniq",
+            width=640,
+            height=360,
+            duration=30,
+            file_size=1_300_000,
+        ),
+        caption="Frage des Tages",
     )
     message._freeze()
     return message
