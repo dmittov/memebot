@@ -299,7 +299,7 @@ class Explainer:
             image = await self.get_image(message=message)
         except Exception:
             raise NoImage()
-        original_caption = (
+        caption = (
             message.reply_to_message.caption
             if message.reply_to_message
             else message.caption
